@@ -1,0 +1,25 @@
+name: xai_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.13.11
+  - pip
+  - pandas>=2.2.0
+  - numpy>=2.1.0
+  - matplotlib>=3.10.0
+  - seaborn>=0.13.0
+  - scikit-learn>=1.6.0
+  - jupyterlab
+  - ipykernel
+  - tensorflow
+  - catboost>=1.2.7
+  - shap>=0.46.0
+  - lime>=0.2.0
+  - pyarrow
+  - ipywidgets
+  - category_encoders
+
+  # linting
+  - nbqa
+  - ruff

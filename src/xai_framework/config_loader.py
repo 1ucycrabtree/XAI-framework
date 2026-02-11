@@ -29,7 +29,7 @@ class AppConfig:
     kernel_shap: KernelShapConfig
 
 
-def load_config(config_path: str = "code/config/config.yaml") -> AppConfig:
+def load_config(config_path: str = "config/config.yaml") -> AppConfig:
     with open(config_path, "r") as f:
         data = yaml.safe_load(f)
 
