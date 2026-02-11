@@ -1,0 +1,15 @@
+paths:
+  x_test: "code/data/processed/feature_engineered/X_test_for_verification_2026-02-09_21:38:05.parquet"
+  y_test: "code/data/processed/feature_engineered/y_test_for_verification_2026-02-09_21:38:05.parquet"
+  model: "code/data/models/catboost_model_feature_engineered_2026-02-09_21:38:05.cbm"
+
+experiment:
+  n_perturbations: 10
+  perturbation_magnitude: 0.02
+
+kernel_shap:
+    background_samples: 50
+    random_seed: 42
+
+model:
+  type: "CatBoost"
