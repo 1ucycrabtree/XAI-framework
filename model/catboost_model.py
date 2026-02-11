@@ -1,8 +1,9 @@
-from catboost import CatBoostClassifier
-from pathlib import Path
 import logging
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+from catboost import CatBoostClassifier
 
 from model.model import BaseModel
 
@@ -25,21 +26,21 @@ class CatBoostFraudModel(BaseModel):
         except Exception as e:
             logging.error(f"Error loading model from {self.path}: {e}")
             raise
-    
+
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         return self.model.predict(X)
-    
+
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         return self.model.predict_proba(X)
-    
+
     def validate_features(self, data_columns: list[str]) -> bool:
         expected = set(self.model.feature_names_)
         provided = set(data_columns)
-        
+
         if expected != provided:
             missing = expected - provided
             extra = provided - expected
-            
+
             if missing:
                 raise ValueError(f"Missing features: {missing}")
 
@@ -47,7 +48,7 @@ class CatBoostFraudModel(BaseModel):
                 raise ValueError(f"Unexpected features: {extra}")
 
         return True
-    
+
     @property
     def feature_names(self) -> list[str]:
         return list(self.model.feature_names_)

@@ -1,5 +1,7 @@
-import pandas as pd
 import os
+
+import pandas as pd
+
 from dataset.data_loader import DataLoader
 from dataset.dataset import Dataset
 
@@ -17,14 +19,14 @@ class ParquetDataLoader(DataLoader):
     ) -> Dataset:
         if not os.path.exists(x_path):
             raise FileNotFoundError(f"File not found: {x_path}")
-        
+
         X = pd.read_parquet(x_path)
 
         y = None
         if y_path:
             if not os.path.exists(y_path):
                 raise FileNotFoundError(f"File not found: {y_path}")
-            
+
             y = pd.read_parquet(y_path)
 
             if isinstance(y, pd.DataFrame) and y.shape[1] == 1:
@@ -37,4 +39,3 @@ class ParquetDataLoader(DataLoader):
             feature_names=list(X.columns),
             metadata={"source": "parquet", **(metadata or {})},
         )
-    

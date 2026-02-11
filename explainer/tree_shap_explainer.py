@@ -1,7 +1,8 @@
-import shap
 import pandas as pd
-from explainer.explanation_result import ExplanationResult
+import shap
+
 from explainer.explainer import BaseExplainer
+from explainer.explanation_result import ExplanationResult
 
 
 class TreeShapWrapper(BaseExplainer):

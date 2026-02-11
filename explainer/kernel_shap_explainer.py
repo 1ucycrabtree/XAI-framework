@@ -1,6 +1,7 @@
-import shap
-import pandas as pd
 import numpy as np
+import pandas as pd
+import shap
+
 from explainer.explainer import BaseExplainer
 from explainer.explanation_result import ExplanationResult
 
@@ -19,8 +20,8 @@ class KernelShapWrapper(BaseExplainer):
         if isinstance(shap_values, list):
             shap_values = shap_values[1]
 
-
-        # For binary classification, select the base value for the positive class (index 1)
+        # Select the base value for the positive class (index 1)
+        # for binary classification
         if isinstance(base_value, (list, tuple, np.ndarray)):
             if len(base_value) == 2:
                 base_value = float(base_value[1])

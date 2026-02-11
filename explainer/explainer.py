@@ -1,14 +1,16 @@
 from abc import ABC, abstractmethod
+
 import numpy as np
 import pandas as pd
 
-from explainer.explanation_result import ExplanationResult
 from explainer.explanation import Explanation
+from explainer.explanation_result import ExplanationResult
 
 
 class BaseExplainer(ABC):
     """
-    Abstract base class for model explainers. Defines the interface for generating feature attributions.
+    Abstract base class for model explainers. Defines the interface
+    for generating feature attributions.
     """
 
     @abstractmethod

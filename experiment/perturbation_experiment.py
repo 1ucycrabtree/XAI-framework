@@ -1,9 +1,11 @@
+import logging
+
+import numpy as np
+import pandas as pd
+from scipy.stats import spearmanr
+
 from experiment.experiment import BaseExperiment
 from experiment.experiment_result import ExperimentResult
-from scipy.stats import spearmanr
-import pandas as pd
-import numpy as np
-import logging
 
 
 class PerturbationExperiment(BaseExperiment):
@@ -55,30 +57,37 @@ class PerturbationExperiment(BaseExperiment):
 
         if tp_data.empty:
             raise ValueError("No true positive samples found in the dataset.")
-        logging.info(f"Found {len(tp_data)} true positive samples. Sampling {self.sample_size} for the experiment.")
+        logging.info(
+            f"Found {len(tp_data)} true positive samples.\n"
+            f"Sampling {self.sample_size} for the experiment."
+        )
 
         sampled_data = self._sample(tp_data)
 
         logging.info("Generating baseline explanations for the sampled data.")
         baseline_explanations = self.explainer.explain(sampled_data)
-        
+
         logging.info("Applying perturbation strategy to the sampled data.")
         perturbed_data = self.perturbation_strategy.perturb(sampled_data)
 
         logging.info("Generating explanations for the perturbed data.")
         perturbed_explanations = self.explainer.explain(perturbed_data)
 
-        logging.info("Computing rank correlations between baseline and perturbed explanations.")
+        logging.info(
+            "Computing rank correlations between baseline and perturbed explanations."
+        )
         rank_correlations = self._compute_rank_corrleation(
             baseline_explanations, perturbed_explanations
         )
 
         logging.info("Rank correlations computed. Summarising results.")
 
-        
         for idx, corr in enumerate(rank_correlations):
             instance_id = baseline_explanations.instance_ids[idx]
-            result.add_metric("rank_correlation_with_ids", {"instance_id": instance_id, "rank_correlation": float(corr)})
+            result.add_metric(
+                "rank_correlation_with_ids",
+                {"instance_id": instance_id, "rank_correlation": float(corr)},
+            )
         result.add_metric("mean_rank_correlation", float(np.nanmean(rank_correlations)))
         result.add_metric("std_rank_correlation", float(np.nanstd(rank_correlations)))
         result.add_metric("min_rank_correlation", float(np.nanmin(rank_correlations)))

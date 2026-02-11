@@ -1,12 +1,13 @@
 import logging
 
-from explainer.tree_shap_explainer import TreeShapWrapper
-# from explainer.kernel_shap_explainer import KernelShapWrapper
-from model.catboost_model import CatBoostFraudModel
+from config_loader import load_config
 from dataset.parquet_loader import ParquetDataLoader
 from experiment.perturbation_experiment import PerturbationExperiment
+from explainer.tree_shap_explainer import TreeShapWrapper
+
+# from explainer.kernel_shap_explainer import KernelShapWrapper
+from model.catboost_model import CatBoostFraudModel
 from perturbation.noise_perturbation import GaussianNoisePerturbation
-from config_loader import load_config
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s | %(levelname)s: %(message)s"
@@ -50,7 +51,7 @@ def main():
 
     pe_result = perturbation_experiment.run()
     pe_result.summary()
-    
+
     logging.info("Experiment completed successfully!")
 
 
