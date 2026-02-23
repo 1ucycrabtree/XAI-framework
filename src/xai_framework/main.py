@@ -2,12 +2,12 @@ import logging
 
 from config_loader import load_config
 from dataset.parquet_loader import ParquetDataLoader
-from experiment.perturbation_experiment import PerturbationExperiment
-from explainer.tree_shap_explainer import TreeShapWrapper
 
 # from explainer.kernel_shap_explainer import KernelShapWrapper
-from model.catboost_model import CatBoostFraudModel
-from perturbation.noise_perturbation import GaussianNoisePerturbation
+from example.catboost_model import CatBoostFraudModel
+from example.noise_perturbation import GaussianNoisePerturbation
+from example.perturbation_experiment import PerturbationExperiment
+from example.tree_shap_explainer import TreeShapWrapper
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s | %(levelname)s: %(message)s"
