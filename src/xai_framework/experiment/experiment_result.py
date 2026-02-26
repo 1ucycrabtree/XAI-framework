@@ -10,7 +10,7 @@ class ExperimentResult:
     metrics: Dict[str, List[float]] = field(default_factory=dict)
 
     def summary(self) -> None:
-        logging.info(f"Printing summary for experiment: {self.experiment_name}")
+        logging.info(f"Printing summary for experiment: {self.experiment_name}.")
         print(f"Experiment: {self.experiment_name}")
         for metric, values in self.metrics.items():
             if len(values) > 5:

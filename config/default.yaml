@@ -1,0 +1,23 @@
+dataset:
+  file_path: "data/processed/cleaned/test_dataset_2026-01-26_20:40:38.parquet"
+  target_label: isFraud
+  drop_columns:
+    - TransactionID
+    - TransactionDT
+  metadata:
+    name: "IEEE-CIS Fraud Detection"
+    type: cleaned
+
+model:
+  architecture: CatBoost
+  file_path: "data/models/catboost_model_cleaned_2026-01-28_22:03:17.cbm"
+  metadata:
+    name: "CatBoost Fraud Model"
+
+experiment:
+  n_perturbations: 10
+  perturbation_magnitude: 0.02
+
+kernel_shap:
+  background_samples: 50
+  random_seed: 42

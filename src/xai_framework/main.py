@@ -1,33 +1,45 @@
+import argparse
 import logging
 
 from config_loader import load_config
-from dataset.parquet_loader import ParquetDataLoader
-
-# from explainer.kernel_shap_explainer import KernelShapWrapper
-from example.catboost_model import CatBoostFraudModel
+from dataset.data_loader import get_dataset_loader
 from example.noise_perturbation import GaussianNoisePerturbation
 from example.perturbation_experiment import PerturbationExperiment
 from example.tree_shap_explainer import TreeShapWrapper
+from model.model import get_model
+
+# from explainer.kernel_shap_explainer import KernelShapWrapper
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s | %(levelname)s: %(message)s"
 )
 
 
-def main():
-    cfg = load_config()
-    parquet_loader = ParquetDataLoader()
-    metadata = {
-        "dataset": "IEEE-CIS-Fraud-Detection",
-        "type": "test",
-        "state": "feature_engineered",
-    }
+def parse_args():
+    parser = argparse.ArgumentParser(description="XAI Robustness Framework")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="default.yaml",
+        help="Name of config YAML file",
+    )
+    return parser.parse_args()
 
-    dataset = parquet_loader.load(
-        cfg.paths.x_test, cfg.paths.y_test, target_label="is_fraud", metadata=metadata
+
+def main():
+    args = parse_args()
+    cfg = load_config(args.config)
+
+    loader = get_dataset_loader(cfg.dataset.file_path)
+
+    dataset = loader.load(
+        path=cfg.dataset.file_path,
+        target_label=cfg.dataset.target_label,
+        drop_columns=cfg.dataset.drop_columns,
+        metadata=cfg.dataset.metadata,
     )
 
-    fraud_model = CatBoostFraudModel(cfg.paths.model)
+    fraud_model = get_model(cfg.model.architecture, cfg.model.file_path)
 
     fraud_model.validate_features(dataset.feature_names)
 

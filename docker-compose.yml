@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  xai-robustness:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: xai-robustness:latest
+    container_name: xai-fraud-detection
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./data:/app/data
+      # Ignore cache directories
+      - /app/src/__pycache__
+      - /app/src/.ruff_cache
+    environment:
+      - PYTHONPATH=/app/src
+    stdin_open: true
+    tty: true
