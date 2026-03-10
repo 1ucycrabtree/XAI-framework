@@ -151,10 +151,6 @@ Parallel chunk execution:
 - `max_workers: 1` keeps the original single-worker behaviour.
 - For heavy explainers, start with small values and scale based on RAM/CPU headroom.
 
-Sampling group selection:
-
-- Set `experiment.sample_group` to choose which confusion-matrix group is sampled: `TP`, `TN`, `FP`, or `FN`.
-
 Important:
 
 - Resume only works for the same `run_id`.
@@ -163,7 +159,7 @@ Important:
 
 ## Output Layout
 
-For a run id like `BaselineExperiment_run_20260309_165129`:
+For a run id like `TestExperiment_run_20260309_165129`:
 
 - Checkpoints:
   - `results/checkpoints/<run_id>/<explainer>_<perturbation>/run_manifest.json`
@@ -225,12 +221,13 @@ metrics:
   - name: GlobalSufficiencyMetric
 
 experiment:
-  name: BaselineExperiment
-  sample_size: 1000
+  name: ExampleExperiment
+  type: BaselineExperiment
+  sample_size: 10
   sample_group: TP
   random_seed: 42
-  chunk_size: 50
-  max_workers: 4
+  chunk_size: 5
+  max_workers: 1
   resume: true
   checkpoint_dir: "results/checkpoints"
   results_dir: "results"
@@ -240,7 +237,7 @@ experiment:
 ## Run
 
 ```bash
-python src/main.py --config TabularLIME_TP_Noise.yaml
+python src/main.py --config default.yaml
 ```
 
 ## License
