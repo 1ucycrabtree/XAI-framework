@@ -124,7 +124,7 @@ The correct loader is selected automatically from the file extension.
 
 | Experiment   | `name` value         |
 | -------------------- | -------------------- |
-| Baseline Experiment | `LocalGaussianNoise` |
+| Baseline Experiment | `BaselineExperiment` |
 
 ---
 
