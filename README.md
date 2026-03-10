@@ -16,9 +16,9 @@ python src/main.py --config default.yaml
 ```
 xai-robustness/
 ├── config/
-│   └── default.yaml          # Experiment variables (model, explanation method, perturbation rules)
-│   └── baseline_LIME.yaml    # Baseline experiment with TabularLIME
-│   └── baseline_SHAP.yaml    # Baseline experiment with KernelSHAP
+│   └── default.yaml                    # Default experiment variables
+│   └── KernelSHAP_*_*.yaml             # KernelSHAP configs by group/perturbation
+│   └── TabularLIME_*_*.yaml            # TabularLIME configs by group/perturbation
 ├── data/                     # Mount your dataset and model here
 ├── results/                  # Outputs and checkpoints written here
 ├── src/
@@ -240,5 +240,9 @@ experiment:
 ## Run
 
 ```bash
-python src/main.py --config TabularLIME.yaml
+python src/main.py --config TabularLIME_TP_Noise.yaml
 ```
+
+## License
+
+Apache License 2.0. See `LICENSE`.
