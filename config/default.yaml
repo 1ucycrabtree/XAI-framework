@@ -24,18 +24,18 @@ explainer:
 
 perturbations:
   - name: LocalGaussianNoise
-    n_perturbations: 10
+    n_perturbations: 3
     random_seed: 42
     params:
       lambda: 0.5
   - name: DirectionalDrift
-    n_perturbations: 10
+    n_perturbations: 3
     random_seed: 42
     params:
       drift_factor: 0.5
       target_features: ["TransactionAmt"]
   - name: TopKFeatures
-    n_perturbations: 10
+    n_perturbations: 3
     random_seed: 42
     params:
       k: 5
@@ -50,11 +50,12 @@ metrics:
   - name: SignConsistencyRate
 
 experiment:
-  name: BaselineExperiment
-  sample_size: 100
+  name: TestExperiment
+  type: BaselineExperiment
+  sample_size: 10
   sample_group: TP
   random_seed: 42
-  chunk_size: 25
+  chunk_size: 10
   max_workers: 1
   resume: true
   checkpoint_dir: "results/checkpoints"

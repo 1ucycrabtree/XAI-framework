@@ -1,8 +1,5 @@
-import json
 import logging
 import threading
-import time
-from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from typing import Any, Callable
 
 import numpy as np
@@ -11,13 +8,15 @@ import pandas as pd
 from experiment.base_experiment import BaseExperiment
 from experiment.experiment_result import ExperimentResult
 from experiment.registry import EXPERIMENTS
+from experiment.sample_group_mixin import SampleGroupMixin
 from explainer.explanation import Explanation
 from explainer.explanation_result import ExplanationResult
 from metric.base_metric import BaseGlobalMetric, BaseLocalMetric
+from utils.json_utils import read_json, write_json_atomic
 
 
 @EXPERIMENTS.register_module("BaselineExperiment")
-class BaselineExperiment(BaseExperiment):
+class BaselineExperiment(SampleGroupMixin, BaseExperiment):
     def __init__(
         self,
         cfg,
@@ -62,14 +61,13 @@ class BaselineExperiment(BaseExperiment):
         self.initialise_chunking_paths(stage_id)
         self.result_path = self.results_dir / f"{stage_id}_result.json"
 
-    def _resolve_workers(self, n_pending_chunks: int) -> int:
-        workers = max(1, int(self.cfg.max_workers))
-        return min(workers, max(1, n_pending_chunks))
-
     def _request_stop(self, reason: str) -> None:
         if not self._stop_event.is_set():
             logging.warning("Stop requested: %s", reason)
             self._stop_event.set()
+
+    def _stop_requested(self) -> bool:
+        return self._stop_event.is_set()
 
     def _attach_stop_event(self, explainer: Any, perturbation: Any) -> None:
         setattr(explainer, "stop_event", self._stop_event)
@@ -97,29 +95,6 @@ class BaselineExperiment(BaseExperiment):
         perturbation = self.perturbation_factory(chunk_id)
         self._attach_stop_event(explainer, perturbation)
         return explainer, perturbation
-
-    def _get_masked_data(self) -> pd.DataFrame:
-        group = str(self.cfg.sample_group).upper()
-        mapping = {
-            "TP": (1, 1),
-            "TN": (0, 0),
-            "FP": (1, 0),
-            "FN": (0, 1),
-        }
-        if group not in mapping:
-            raise ValueError(
-                f"Unsupported sample_group '{self.cfg.sample_group}'. Use TP/TN/FP/FN."
-            )
-        predicted_val, actual_val = mapping[group]
-
-        X = self.dataset.X_model
-        y = self.dataset.y
-
-        preds = self.model.predict(X)
-        preds = np.array(preds).flatten()
-
-        mask = (preds == predicted_val) & (y == actual_val)
-        return X.loc[mask]
 
     def _sample(self, X: pd.DataFrame) -> pd.DataFrame:
         return X.sample(n=min(self.sample_size, len(X)), random_state=self.random_seed)
@@ -195,7 +170,12 @@ class BaselineExperiment(BaseExperiment):
                 for exp in perturbed_explanations.instances
             ],
         }
-        self._write_json_atomic(self.chunks_dir / f"chunk_{chunk_id}.json", payload)
+        write_json_atomic(
+            self.chunks_dir / f"chunk_{chunk_id}.json",
+            payload,
+            indent=2,
+            default=self._json_default,
+        )
 
     def _compute_chunk(
         self,
@@ -240,261 +220,8 @@ class BaselineExperiment(BaseExperiment):
             perturbed_explanations,
         )
 
-    def _mark_chunk_running(self, chunk_df: pd.DataFrame, row_idx: int) -> None:
-        chunk_df.at[row_idx, "status"] = "running"
-        attempts_raw = chunk_df.at[row_idx, "attempts"]
-        attempts_num = pd.to_numeric(pd.Series([attempts_raw]), errors="coerce").iloc[0]
-        current_attempts = 0 if pd.isna(attempts_num) else int(attempts_num)
-        chunk_df.at[row_idx, "attempts"] = current_attempts + 1
-        chunk_df.at[row_idx, "started_at"] = self._utcnow()
-        chunk_df.at[row_idx, "error_message"] = pd.NA
-        self._save_chunk_manifest(chunk_df)
-
-    def _mark_chunk_done(self, chunk_df: pd.DataFrame, row_idx: int) -> None:
-        chunk_df.at[row_idx, "status"] = "done"
-        chunk_df.at[row_idx, "completed_at"] = self._utcnow()
-        self._save_chunk_manifest(chunk_df)
-
-    def _mark_chunk_failed(
-        self, chunk_df: pd.DataFrame, row_idx: int, err: Exception
-    ) -> None:
-        chunk_df.at[row_idx, "status"] = "failed"
-        chunk_df.at[row_idx, "error_message"] = str(err)
-        self._save_chunk_manifest(chunk_df)
-
-    def _process_chunks_sequential(
-        self,
-        sampled_data: pd.DataFrame,
-        chunk_df: pd.DataFrame,
-        pending_row_idxs: list[int],
-    ) -> pd.DataFrame:
-
-        logging.info(
-            "Processing %s pending chunks sequentially.", len(pending_row_idxs)
-        )
-        for row_idx in pending_row_idxs:
-            row = chunk_df.iloc[row_idx]
-            chunk_id = int(row["chunk_id"])
-            start_row = int(row["start_row"])
-            end_row = int(row["end_row"])
-
-            attempts_raw = chunk_df.at[row_idx, "attempts"]
-            attempts_num = pd.to_numeric(
-                pd.Series([attempts_raw]), errors="coerce"
-            ).iloc[0]
-            logging.info(
-                "Starting chunk %s rows[%s:%s) attempt=%s",
-                chunk_id,
-                start_row,
-                end_row,
-                int(attempts_num) + 1,
-            )
-            self._mark_chunk_running(chunk_df, row_idx)
-
-            try:
-                if self._stop_event.is_set():
-                    raise InterruptedError("Stop requested before chunk execution.")
-                chunk_started = time.perf_counter()
-                (
-                    _,
-                    chunk_data,
-                    perturbed_data,
-                    baseline_explanations,
-                    perturbed_explanations,
-                ) = self._compute_chunk(
-                    chunk_id=chunk_id,
-                    start_row=start_row,
-                    end_row=end_row,
-                    sampled_data=sampled_data,
-                )
-
-                self._write_chunk_output(
-                    chunk_id=chunk_id,
-                    baseline_data=chunk_data,
-                    perturbed_data=perturbed_data,
-                    baseline_explanations=baseline_explanations,
-                    perturbed_explanations=perturbed_explanations,
-                )
-                self._mark_chunk_done(chunk_df, row_idx)
-                chunk_elapsed = time.perf_counter() - chunk_started
-                logging.info(
-                    "Completed chunk %s in %.2fs (baseline=%s, perturbed=%s).",
-                    chunk_id,
-                    chunk_elapsed,
-                    len(chunk_data),
-                    len(perturbed_data),
-                )
-
-            except Exception as e:
-                self._mark_chunk_failed(chunk_df, row_idx, e)
-                logging.exception("Chunk %s failed: %s", chunk_id, e)
-                raise
-
-        return chunk_df
-
-    def _process_chunks_parallel(
-        self,
-        sampled_data: pd.DataFrame,
-        chunk_df: pd.DataFrame,
-        pending_row_idxs: list[int],
-    ) -> pd.DataFrame:
-        workers = self._resolve_workers(len(pending_row_idxs))
-        if workers == 1:
-            return self._process_chunks_sequential(
-                sampled_data, chunk_df, pending_row_idxs
-            )
-
-        logging.info(
-            "Processing %s pending chunks with %s worker threads.",
-            len(pending_row_idxs),
-            workers,
-        )
-        future_to_row_idx: dict[
-            Future[
-                tuple[
-                    int,
-                    pd.DataFrame,
-                    pd.DataFrame,
-                    ExplanationResult,
-                    ExplanationResult,
-                ]
-            ],
-            int,
-        ] = {}
-        future_to_started_at: dict[
-            Future[
-                tuple[
-                    int,
-                    pd.DataFrame,
-                    pd.DataFrame,
-                    ExplanationResult,
-                    ExplanationResult,
-                ]
-            ],
-            float,
-        ] = {}
-
-        pending_iter = iter(pending_row_idxs)
-        executor = ThreadPoolExecutor(
-            max_workers=workers, thread_name_prefix="chunk-worker"
-        )
-        try:
-            for _ in range(workers):
-                try:
-                    row_idx = next(pending_iter)
-                except StopIteration:
-                    break
-                row = chunk_df.iloc[row_idx]
-                self._mark_chunk_running(chunk_df, row_idx)
-                future = executor.submit(
-                    self._compute_chunk,
-                    int(row["chunk_id"]),
-                    int(row["start_row"]),
-                    int(row["end_row"]),
-                    sampled_data,
-                )
-                future_to_row_idx[future] = row_idx
-                future_to_started_at[future] = time.perf_counter()
-
-            while future_to_row_idx:
-                done, _ = wait(future_to_row_idx.keys(), return_when=FIRST_COMPLETED)
-
-                for finished in done:
-                    row_idx = future_to_row_idx.pop(finished)
-                    chunk_started = future_to_started_at.pop(
-                        finished, time.perf_counter()
-                    )
-                    row = chunk_df.iloc[row_idx]
-                    chunk_id = int(row["chunk_id"])
-
-                    try:
-                        (
-                            _,
-                            chunk_data,
-                            perturbed_data,
-                            baseline_explanations,
-                            perturbed_explanations,
-                        ) = finished.result()
-
-                        self._write_chunk_output(
-                            chunk_id=chunk_id,
-                            baseline_data=chunk_data,
-                            perturbed_data=perturbed_data,
-                            baseline_explanations=baseline_explanations,
-                            perturbed_explanations=perturbed_explanations,
-                        )
-                        self._mark_chunk_done(chunk_df, row_idx)
-                        chunk_elapsed = time.perf_counter() - chunk_started
-                        logging.info(
-                            "Completed chunk %s in %.2fs (baseline=%s, perturbed=%s).",
-                            chunk_id,
-                            chunk_elapsed,
-                            len(chunk_data),
-                            len(perturbed_data),
-                        )
-
-                    except Exception as e:
-                        self._mark_chunk_failed(chunk_df, row_idx, e)
-                        logging.exception("Chunk %s failed: %s", chunk_id, e)
-                        for queued in future_to_row_idx:
-                            queued.cancel()
-                        raise
-
-                    if self._stop_event.is_set():
-                        raise InterruptedError(
-                            "Stop requested during parallel chunk processing."
-                        )
-
-                    try:
-                        next_row_idx = next(pending_iter)
-                    except StopIteration:
-                        continue
-
-                    next_row = chunk_df.iloc[next_row_idx]
-                    self._mark_chunk_running(chunk_df, next_row_idx)
-                    next_future = executor.submit(
-                        self._compute_chunk,
-                        int(next_row["chunk_id"]),
-                        int(next_row["start_row"]),
-                        int(next_row["end_row"]),
-                        sampled_data,
-                    )
-                    future_to_row_idx[next_future] = next_row_idx
-                    future_to_started_at[next_future] = time.perf_counter()
-        except KeyboardInterrupt:
-            self._request_stop("KeyboardInterrupt received in chunk processor.")
-            for queued in future_to_row_idx:
-                queued.cancel()
-            raise
-        finally:
-            executor.shutdown(wait=False, cancel_futures=True)
-
-        return chunk_df
-
-    def _process_chunks(
-        self, sampled_data: pd.DataFrame, chunk_df: pd.DataFrame
-    ) -> pd.DataFrame:
-        pending_row_idxs = [
-            row_idx
-            for row_idx in range(len(chunk_df))
-            if chunk_df.iloc[row_idx]["status"] != "done"
-        ]
-
-        if not pending_row_idxs:
-            logging.info("No pending chunks found. Skipping chunk processing.")
-            return chunk_df
-
-        logging.info(
-            "Chunk processing summary before execution: total=%s done=%s pending_or_failed=%s",  # noqa: E501
-            len(chunk_df),
-            int((chunk_df["status"] == "done").sum()),
-            len(pending_row_idxs),
-        )
-        return self._process_chunks_parallel(sampled_data, chunk_df, pending_row_idxs)
-
     def _load_chunk_output(self, chunk_id: int) -> dict[str, Any]:
-        with open(self.chunks_dir / f"chunk_{chunk_id}.json", "r") as f:
-            return json.load(f)
+        return read_json(self.chunks_dir / f"chunk_{chunk_id}.json")
 
     def _rebuild_explanation_results(
         self, chunk_df: pd.DataFrame
@@ -692,10 +419,17 @@ class BaselineExperiment(BaseExperiment):
         logging.info("Run directory: %s", self.run_root)
         manifest["status"] = "running"
         manifest["updated_at"] = self._utcnow()
-        self._write_json_atomic(self.run_manifest_path, manifest)
+        write_json_atomic(
+            self.run_manifest_path, manifest, indent=2, default=self._json_default
+        )
 
         try:
-            selected_data = self._get_masked_data()
+            X = self.dataset.X_model
+            y = self.dataset.y
+            preds = self.model.predict(X)
+            selected_data = self._get_masked_data_by_group(
+                X=X, y=y, preds=preds, sample_group=self.cfg.sample_group
+            )
             group = str(self.cfg.sample_group).upper()
             if selected_data.empty:
                 raise ValueError(f"No samples found for sample_group='{group}'.")
@@ -711,7 +445,12 @@ class BaselineExperiment(BaseExperiment):
             if not failed_chunks.empty:
                 manifest["status"] = "failed"
                 manifest["updated_at"] = self._utcnow()
-                self._write_json_atomic(self.run_manifest_path, manifest)
+                write_json_atomic(
+                    self.run_manifest_path,
+                    manifest,
+                    indent=2,
+                    default=self._json_default,
+                )
                 raise RuntimeError(
                     "Experiment did not complete: some chunks are not in 'done' state."
                 )
@@ -744,7 +483,9 @@ class BaselineExperiment(BaseExperiment):
             manifest["status"] = "completed"
             manifest["updated_at"] = self._utcnow()
             manifest["result_path"] = str(self.result_path)
-            self._write_json_atomic(self.run_manifest_path, manifest)
+            write_json_atomic(
+                self.run_manifest_path, manifest, indent=2, default=self._json_default
+            )
             return result
         except (KeyboardInterrupt, InterruptedError):
             self._request_stop("Run interrupted by user.")
@@ -757,6 +498,8 @@ class BaselineExperiment(BaseExperiment):
                     self._save_chunk_manifest(chunk_df)
             manifest["status"] = "interrupted"
             manifest["updated_at"] = self._utcnow()
-            self._write_json_atomic(self.run_manifest_path, manifest)
+            write_json_atomic(
+                self.run_manifest_path, manifest, indent=2, default=self._json_default
+            )
             logging.warning("Run interrupted and checkpoint state saved.")
             raise KeyboardInterrupt
