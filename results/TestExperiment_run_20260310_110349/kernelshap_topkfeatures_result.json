@@ -1,0 +1,401 @@
+{
+    "experiment_name": "BaselineExperiment",
+    "metrics": {
+        "RelativeInputStability_with_ids": [
+            {
+                "instance_id": 578488,
+                "RelativeInputStability": 1.394634753793544
+            },
+            {
+                "instance_id": 578488,
+                "RelativeInputStability": 1.6247440067596741
+            },
+            {
+                "instance_id": 578488,
+                "RelativeInputStability": 0.8585712530064085
+            },
+            {
+                "instance_id": 565142,
+                "RelativeInputStability": 1.505662296158137
+            },
+            {
+                "instance_id": 565142,
+                "RelativeInputStability": 1.3592110418480763
+            },
+            {
+                "instance_id": 565142,
+                "RelativeInputStability": 0.9544452900572
+            },
+            {
+                "instance_id": 576204,
+                "RelativeInputStability": 0.35047448559638383
+            },
+            {
+                "instance_id": 576204,
+                "RelativeInputStability": 0.3801877360986867
+            },
+            {
+                "instance_id": 576204,
+                "RelativeInputStability": 0.38165221714668834
+            },
+            {
+                "instance_id": 553431,
+                "RelativeInputStability": 1.4963852372669975
+            },
+            {
+                "instance_id": 553431,
+                "RelativeInputStability": 1.4672843839190592
+            },
+            {
+                "instance_id": 553431,
+                "RelativeInputStability": 1.3539731783770323
+            },
+            {
+                "instance_id": 552746,
+                "RelativeInputStability": 1.489056145395643
+            },
+            {
+                "instance_id": 552746,
+                "RelativeInputStability": 1.44022842881224
+            },
+            {
+                "instance_id": 552746,
+                "RelativeInputStability": 1.436214474829234
+            },
+            {
+                "instance_id": 588666,
+                "RelativeInputStability": 1.2363737677428452
+            },
+            {
+                "instance_id": 588666,
+                "RelativeInputStability": 1.2837426282771531
+            },
+            {
+                "instance_id": 588666,
+                "RelativeInputStability": 0.5098890206046602
+            },
+            {
+                "instance_id": 552906,
+                "RelativeInputStability": 1.5591473752513394
+            },
+            {
+                "instance_id": 552906,
+                "RelativeInputStability": 1.5784654401801432
+            },
+            {
+                "instance_id": 552906,
+                "RelativeInputStability": 1.2813912050043728
+            },
+            {
+                "instance_id": 543242,
+                "RelativeInputStability": 0.1786361728389561
+            },
+            {
+                "instance_id": 551949,
+                "RelativeInputStability": 0.7667551358673059
+            },
+            {
+                "instance_id": 551949,
+                "RelativeInputStability": 0.7458761015032994
+            },
+            {
+                "instance_id": 551949,
+                "RelativeInputStability": 1.295579675611789
+            },
+            {
+                "instance_id": 534055,
+                "RelativeInputStability": 0.6825043034043798
+            },
+            {
+                "instance_id": 534055,
+                "RelativeInputStability": 1.2255780873774134
+            },
+            {
+                "instance_id": 534055,
+                "RelativeInputStability": 1.3675557898374144
+            }
+        ],
+        "RelativeInputStability_mean": [
+            1.1144364154487885
+        ],
+        "RelativeInputStability_std": [
+            0.4333711585492998
+        ],
+        "RelativeInputStability_min": [
+            0.1786361728389561
+        ],
+        "RelativeInputStability_max": [
+            1.6247440067596741
+        ],
+        "RelativeInputStability_n_instances": [
+            28
+        ],
+        "RankBiasedOverlap_with_ids": [
+            {
+                "instance_id": 578488,
+                "RankBiasedOverlap": 0.6615459498267302
+            },
+            {
+                "instance_id": 578488,
+                "RankBiasedOverlap": 0.6899131466995915
+            },
+            {
+                "instance_id": 578488,
+                "RankBiasedOverlap": 0.754011864372138
+            },
+            {
+                "instance_id": 565142,
+                "RankBiasedOverlap": 0.6638571016087402
+            },
+            {
+                "instance_id": 565142,
+                "RankBiasedOverlap": 0.7195062572914012
+            },
+            {
+                "instance_id": 565142,
+                "RankBiasedOverlap": 0.835730809123754
+            },
+            {
+                "instance_id": 576204,
+                "RankBiasedOverlap": 0.7498451245442251
+            },
+            {
+                "instance_id": 576204,
+                "RankBiasedOverlap": 0.6747989050579298
+            },
+            {
+                "instance_id": 576204,
+                "RankBiasedOverlap": 0.6849159510070771
+            },
+            {
+                "instance_id": 553431,
+                "RankBiasedOverlap": 0.5771561561497035
+            },
+            {
+                "instance_id": 553431,
+                "RankBiasedOverlap": 0.6087084383888933
+            },
+            {
+                "instance_id": 553431,
+                "RankBiasedOverlap": 0.6309609094482278
+            },
+            {
+                "instance_id": 552746,
+                "RankBiasedOverlap": 0.6125220198204576
+            },
+            {
+                "instance_id": 552746,
+                "RankBiasedOverlap": 0.6620672387346966
+            },
+            {
+                "instance_id": 552746,
+                "RankBiasedOverlap": 0.6620672387346966
+            },
+            {
+                "instance_id": 588666,
+                "RankBiasedOverlap": 0.6648232034931241
+            },
+            {
+                "instance_id": 588666,
+                "RankBiasedOverlap": 0.6627616959348344
+            },
+            {
+                "instance_id": 588666,
+                "RankBiasedOverlap": 0.8115098334781796
+            },
+            {
+                "instance_id": 552906,
+                "RankBiasedOverlap": 0.6202846129977042
+            },
+            {
+                "instance_id": 552906,
+                "RankBiasedOverlap": 0.6685645519157023
+            },
+            {
+                "instance_id": 552906,
+                "RankBiasedOverlap": 0.7140295813646775
+            },
+            {
+                "instance_id": 543242,
+                "RankBiasedOverlap": 0.6994655832646901
+            },
+            {
+                "instance_id": 551949,
+                "RankBiasedOverlap": 0.7673224879280848
+            },
+            {
+                "instance_id": 551949,
+                "RankBiasedOverlap": 0.7324543898428997
+            },
+            {
+                "instance_id": 551949,
+                "RankBiasedOverlap": 0.6957172367440195
+            },
+            {
+                "instance_id": 534055,
+                "RankBiasedOverlap": 0.9009531169523199
+            },
+            {
+                "instance_id": 534055,
+                "RankBiasedOverlap": 0.770565689309069
+            },
+            {
+                "instance_id": 534055,
+                "RankBiasedOverlap": 0.7176948376624386
+            }
+        ],
+        "RankBiasedOverlap_mean": [
+            0.7004912118462859
+        ],
+        "RankBiasedOverlap_std": [
+            0.07084849354633858
+        ],
+        "RankBiasedOverlap_min": [
+            0.5771561561497035
+        ],
+        "RankBiasedOverlap_max": [
+            0.9009531169523199
+        ],
+        "RankBiasedOverlap_n_instances": [
+            28
+        ],
+        "SignConsistencyRate_with_ids": [
+            {
+                "instance_id": 578488,
+                "SignConsistencyRate": 0.967479674796748
+            },
+            {
+                "instance_id": 578488,
+                "SignConsistencyRate": 0.9715447154471545
+            },
+            {
+                "instance_id": 578488,
+                "SignConsistencyRate": 0.983739837398374
+            },
+            {
+                "instance_id": 565142,
+                "SignConsistencyRate": 0.975609756097561
+            },
+            {
+                "instance_id": 565142,
+                "SignConsistencyRate": 0.975609756097561
+            },
+            {
+                "instance_id": 565142,
+                "SignConsistencyRate": 0.983739837398374
+            },
+            {
+                "instance_id": 576204,
+                "SignConsistencyRate": 0.967479674796748
+            },
+            {
+                "instance_id": 576204,
+                "SignConsistencyRate": 0.959349593495935
+            },
+            {
+                "instance_id": 576204,
+                "SignConsistencyRate": 0.959349593495935
+            },
+            {
+                "instance_id": 553431,
+                "SignConsistencyRate": 0.9512195121951219
+            },
+            {
+                "instance_id": 553431,
+                "SignConsistencyRate": 0.959349593495935
+            },
+            {
+                "instance_id": 553431,
+                "SignConsistencyRate": 0.967479674796748
+            },
+            {
+                "instance_id": 552746,
+                "SignConsistencyRate": 0.967479674796748
+            },
+            {
+                "instance_id": 552746,
+                "SignConsistencyRate": 0.975609756097561
+            },
+            {
+                "instance_id": 552746,
+                "SignConsistencyRate": 0.975609756097561
+            },
+            {
+                "instance_id": 588666,
+                "SignConsistencyRate": 0.967479674796748
+            },
+            {
+                "instance_id": 588666,
+                "SignConsistencyRate": 0.967479674796748
+            },
+            {
+                "instance_id": 588666,
+                "SignConsistencyRate": 0.983739837398374
+            },
+            {
+                "instance_id": 552906,
+                "SignConsistencyRate": 0.967479674796748
+            },
+            {
+                "instance_id": 552906,
+                "SignConsistencyRate": 0.967479674796748
+            },
+            {
+                "instance_id": 552906,
+                "SignConsistencyRate": 0.975609756097561
+            },
+            {
+                "instance_id": 543242,
+                "SignConsistencyRate": 0.967479674796748
+            },
+            {
+                "instance_id": 551949,
+                "SignConsistencyRate": 0.975609756097561
+            },
+            {
+                "instance_id": 551949,
+                "SignConsistencyRate": 0.967479674796748
+            },
+            {
+                "instance_id": 551949,
+                "SignConsistencyRate": 0.959349593495935
+            },
+            {
+                "instance_id": 534055,
+                "SignConsistencyRate": 0.991869918699187
+            },
+            {
+                "instance_id": 534055,
+                "SignConsistencyRate": 0.983739837398374
+            },
+            {
+                "instance_id": 534055,
+                "SignConsistencyRate": 0.975609756097561
+            }
+        ],
+        "SignConsistencyRate_mean": [
+            0.9711091753774682
+        ],
+        "SignConsistencyRate_std": [
+            0.009046707666269098
+        ],
+        "SignConsistencyRate_min": [
+            0.9512195121951219
+        ],
+        "SignConsistencyRate_max": [
+            0.991869918699187
+        ],
+        "SignConsistencyRate_n_instances": [
+            28
+        ],
+        "LocalMetricFilter_prediction_preserving_n": [
+            28
+        ],
+        "LocalMetricFilter_prediction_changed_n": [
+            2
+        ],
+        "LocalMetricFilter_total_n": [
+            30
+        ]
+    }
+}

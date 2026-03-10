@@ -1,14 +1,14 @@
 import numpy as np
 import pandas as pd
 
-from perturbation.perturbation import BasePerturbation
+from perturbation.base_perturbation import BasePerturbation
 
 
 class GaussianNoisePerturbation(BasePerturbation):
     def __init__(self, noise_std: float = 1.0):
         self.noise_std = noise_std
 
-    def perturb(self, X: pd.DataFrame) -> pd.DataFrame:
+    def perturb(self, X: pd.DataFrame, **kwargs) -> pd.DataFrame:
         X_perturbed = X.copy()
 
         numeric_cols = X_perturbed.select_dtypes(include=[np.number]).columns

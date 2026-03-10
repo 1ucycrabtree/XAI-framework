@@ -2,13 +2,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from dataset.data_loader import DataLoader, register_loader
+from dataset.base_loader import BaseDataLoader
+from dataset.registry import DATASET_TYPES
 
 file_suffix = ".csv"
 
 
-@register_loader(file_suffix)
-class CsvDataLoader(DataLoader):
+@DATASET_TYPES.register_module(file_suffix)
+class CsvDataLoader(BaseDataLoader):
     SUPPORTED_SUFFIX = file_suffix
 
     def _load_file(self, path: Path) -> pd.DataFrame:

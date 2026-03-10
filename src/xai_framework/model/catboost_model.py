@@ -4,15 +4,15 @@ import numpy as np
 import pandas as pd
 from catboost import CatBoostClassifier
 
-from model.model import BaseModel, register_model
+from load_config import ModelConfig
+from model.base_model import BaseModel
+from model.registry import MODELS
 
 
-@register_model("catboost")
+@MODELS.register_module("CatBoost")
 class CatBoostFraudModel(BaseModel):
-    def __init__(self, model_path: str):
-        super().__init__(model_path)
-        self._model = CatBoostClassifier()
-        self._load_model()
+    def __init__(self, cfg: ModelConfig):
+        super().__init__(cfg)
 
     @property
     def model(self):
@@ -25,6 +25,7 @@ class CatBoostFraudModel(BaseModel):
             raise FileNotFoundError(f"Model file not found: {self.path}.")
 
         try:
+            self._model = CatBoostClassifier()
             self._model.load_model(self.path)
             logging.info("Model loaded successfully.")
         except Exception as e:
@@ -36,32 +37,3 @@ class CatBoostFraudModel(BaseModel):
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         return self.model.predict_proba(X)
-
-    def validate_features(self, feature_names: list[str]) -> bool:
-        if self.model.feature_names_ is None:
-            raise ValueError(
-                "Model does not have feature names - is the model loaded correctly?"
-            )
-
-        expected = set(self.model.feature_names_)
-        provided = set(feature_names)
-
-        if expected != provided:
-            missing = expected - provided
-            extra = provided - expected
-
-            if missing:
-                raise ValueError(f"Missing features: {missing}")
-
-            if extra:
-                raise ValueError(f"Unexpected features: {extra}")
-
-        return True
-
-    @property
-    def feature_names(self) -> list[str]:
-        if self.model.feature_names_ is None:
-            raise ValueError(
-                "Model does not have feature names - is the model loaded correctly?"
-            )
-        return list(self.model.feature_names_)

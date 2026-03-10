@@ -8,5 +8,4 @@ __pycache__/
 .ruff_cache/
 
 data/
-
-helpers/
+checkpoints/

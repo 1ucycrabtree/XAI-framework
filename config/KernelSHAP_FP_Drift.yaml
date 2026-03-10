@@ -18,44 +18,33 @@ model:
 explainer:
   method: KernelSHAP
   params:
-    background_samples: 50
-    n_samples: "auto"
+    background_samples: 30
+    n_samples: 500
     random_seed: 42
 
+
 perturbations:
-  - name: LocalGaussianNoise
-    n_perturbations: 3
-    random_seed: 42
-    params:
-      lambda: 0.5
   - name: DirectionalDrift
-    n_perturbations: 3
+    n_perturbations: 10
     random_seed: 42
     params:
       drift_factor: 0.5
       target_features: ["TransactionAmt"]
-  - name: TopKFeatures
-    n_perturbations: 3
-    random_seed: 42
-    params:
-      k: 5
-      lambda: 0.5
 
 metrics:
   - name: RelativeInputStability
   - name: RankBiasedOverlap
-    params:
-      W: 0.9
-      d: 5
   - name: SignConsistencyRate
+  - name: GlobalConsistencyMetric
+  - name: GlobalSufficiencyMetric
 
 experiment:
-  name: TestExperiment
+  name: BaselineExperiment_KernelSHAP_FP_Drift
   type: BaselineExperiment
-  sample_size: 10
-  sample_group: TP
+  sample_size: 1000
+  sample_group: FP
   random_seed: 42
-  chunk_size: 10
+  chunk_size: 20
   max_workers: 1
   resume: true
   checkpoint_dir: "results/checkpoints"
