@@ -1,0 +1,110 @@
+dataset:
+  train_file_path: "data/processed/splits/train_dataset_2026-03-07_13:29:54.parquet"
+  test_file_path: "data/processed/splits/test_dataset_2026-03-07_13:29:54.parquet"
+  target_label: isFraud
+  drop_columns:
+    - TransactionID
+    - TransactionDT
+  metadata:
+    name: "IEEE-CIS Fraud Detection"
+    type: cleaned
+
+model:
+  architecture: CatBoost
+  file_path: "data/models/catboost_model_cleaned_2026-01-28_22:03:17.cbm"
+  metadata:
+    name: "CatBoost Fraud Model"
+
+explainer:
+  method: TabularLIME
+  params:
+    class_names: ["Fraud", "NotFraud"]
+    random_seed: 42
+    discretize_continuous: False
+    kernel_width: 3.0
+    num_samples: 5000
+    auto_detect_binary: True
+    impute_strategy: median
+    categorical_features:
+      [
+        "ProductCD",
+        "card1",
+        "card2",
+        "card3",
+        "card4",
+        "card5",
+        "card6",
+        "addr1",
+        "addr2",
+        "P_emaildomain",
+        "R_emaildomain",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "id_03",
+        "id_04",
+        "id_09",
+        "id_10",
+        "id_12",
+        "id_13",
+        "id_14",
+        "id_15",
+        "id_16",
+        "id_17",
+        "id_18",
+        "id_19",
+        "id_20",
+        "id_21",
+        "id_22",
+        "id_23",
+        "id_24",
+        "id_25",
+        "id_26",
+        "id_27",
+        "id_28",
+        "id_29",
+        "id_30",
+        "id_31",
+        "id_32",
+        "id_33",
+        "id_34",
+        "id_35",
+        "id_36",
+        "id_37",
+        "id_38",
+        "DeviceType",
+        "DeviceInfo",
+      ]
+
+perturbations:
+  - name: DirectionalDrift
+    n_perturbations: 10
+    random_seed: 42
+    params:
+      drift_factor: 0.5
+      target_features: ["TransactionAmt"]
+
+metrics:
+  - name: RelativeInputStability
+  - name: RankBiasedOverlap
+  - name: SignConsistencyRate
+  - name: GlobalConsistencyMetric
+  - name: GlobalSufficiencyMetric
+
+experiment:
+  name: BaselineExperiment_TabularLIME_FP_Drift
+  type: BaselineExperiment
+  sample_size: 1000
+  sample_group: FP
+  random_seed: 42
+  chunk_size: 20
+  max_workers: 4
+  resume: true
+  checkpoint_dir: "results/checkpoints"
+  results_dir: "results"

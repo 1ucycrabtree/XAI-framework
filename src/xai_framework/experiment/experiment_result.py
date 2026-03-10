@@ -11,12 +11,11 @@ class ExperimentResult:
 
     def summary(self) -> None:
         logging.info(f"Printing summary for experiment: {self.experiment_name}.")
-        print(f"Experiment: {self.experiment_name}")
         for metric, values in self.metrics.items():
             if len(values) > 5:
-                print(f"{metric}: {values[:5]}... (total {len(values)} values)")
+                logging.info(f"{metric}: {values[:5]}... (total {len(values)} values)")
             else:
-                print(f"{metric}: {values}")
+                logging.info(f"{metric}: {values}")
 
     def save(self, filepath: str) -> None:
         with open(filepath, "w") as f:
