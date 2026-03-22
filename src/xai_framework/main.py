@@ -86,7 +86,15 @@ def main():
 
         logging.info(f"Running perturbation experiment: {perturb_cfg.name}...")
         perturbation = get_perturbation(
-            perturb_cfg, training_data.X_model, cfg.dataset.immutable_features
+            perturb_cfg,
+            training_data.X_model,
+            cfg.dataset.immutable_features,
+            cfg.dataset.categorical_features,
+            cfg.dataset.perturbable_categorical_features,
+            cfg.dataset.perturbable_numerical_features,
+            cfg.dataset.integer_features,
+            cfg.dataset.non_negative_features,
+            cfg.dataset.non_negative_prefixes,
         )
 
         def build_explainer_for_chunk(chunk_id: int):
@@ -115,6 +123,12 @@ def main():
                 perturb_cfg_for_chunk,
                 training_data.X_model,
                 cfg.dataset.immutable_features,
+                cfg.dataset.categorical_features,
+                cfg.dataset.perturbable_categorical_features,
+                cfg.dataset.perturbable_numerical_features,
+                cfg.dataset.integer_features,
+                cfg.dataset.non_negative_features,
+                cfg.dataset.non_negative_prefixes,
             )
 
         experiment = get_experiment(

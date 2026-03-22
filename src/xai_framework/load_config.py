@@ -11,6 +11,12 @@ class DatasetConfig:
     test_file_path: str
     target_label: str
     drop_columns: list[str] = field(default_factory=list)
+    categorical_features: list[str] = field(default_factory=list)
+    perturbable_categorical_features: list[str] = field(default_factory=list)
+    perturbable_numerical_features: list[str] = field(default_factory=list)
+    integer_features: list[str] = field(default_factory=list)
+    non_negative_features: list[str] = field(default_factory=list)
+    non_negative_prefixes: list[str] = field(default_factory=list)
     immutable_features: list[str] = field(default_factory=list)
     metadata: dict | None = None
 

@@ -16,9 +16,9 @@ python src/main.py --config default.yaml
 ```
 xai-robustness/
 ├── config/
-│   └── default.yaml                    # Default experiment variables
-│   └── KernelSHAP_*_*.yaml             # KernelSHAP configs by group/perturbation
-│   └── TabularLIME_*_*.yaml            # TabularLIME configs by group/perturbation
+│   └── default.yaml          # Experiment variables (model, explanation method, perturbation rules)
+│   └── baseline_LIME.yaml    # Baseline experiment with TabularLIME
+│   └── baseline_SHAP.yaml    # Baseline experiment with KernelSHAP
 ├── data/                     # Mount your dataset and model here
 ├── results/                  # Outputs and checkpoints written here
 ├── src/
@@ -46,11 +46,11 @@ xai-robustness/
 3. Build metrics from registry.
 4. For each perturbation strategy, build and run an experiment via the experiment registry.
 
-The default experiment is `BaselineExperiment`, selected by:
+The default experiment is `DissertationExperiment`, selected by:
 
 ```yaml
 experiment:
-  name: BaselineExperiment
+  name: DissertationExperiment
 ```
 
 ## Registry Pattern
@@ -124,7 +124,7 @@ The correct loader is selected automatically from the file extension.
 
 | Experiment   | `name` value         |
 | -------------------- | -------------------- |
-| Baseline Experiment | `BaselineExperiment` |
+| Baseline Experiment | `DissertationExperiment` |
 
 ---
 
@@ -151,6 +151,10 @@ Parallel chunk execution:
 - `max_workers: 1` keeps the original single-worker behaviour.
 - For heavy explainers, start with small values and scale based on RAM/CPU headroom.
 
+Sampling group selection:
+
+- Set `experiment.sample_group` to choose which confusion-matrix group is sampled: `TP`, `TN`, `FP`, or `FN`.
+
 Important:
 
 - Resume only works for the same `run_id`.
@@ -159,7 +163,7 @@ Important:
 
 ## Output Layout
 
-For a run id like `TestExperiment_run_20260309_165129`:
+For a run id like `DissertationExperiment_run_20260309_165129`:
 
 - Checkpoints:
   - `results/checkpoints/<run_id>/<explainer>_<perturbation>/run_manifest.json`
@@ -196,6 +200,27 @@ dataset:
   train_file_path: "data/processed/splits/train_dataset.parquet"
   test_file_path: "data/processed/splits/test_dataset.parquet"
   target_label: isFraud
+  categorical_features: # Optional: Any features that should be treated as categorical 
+    - ProductCD
+    - card1
+    - ...
+  perturbable_categorical_features: # Optional: If provided, perturbations only mutate this categorical subset
+    - ProductCD
+    - card4
+  perturbable_numerical_features: # Optional: If provided, perturbations only mutate this numerical subset
+    - TransactionAmt
+    - dist1
+  integer_features: # Optional: Any discrete integer-like features to round after noise
+    - C1
+    - D1
+    - ...
+  non_negative_features: # Optional: Always clamp these features to >= 0
+    - TransactionAmt
+  non_negative_prefixes: # Optional: Clamp any feature starting with these prefixes
+    - C
+    - D
+  immutable_features: # Optional: Never perturb these features
+    - card1
 
 model:
   architecture: CatBoost
@@ -210,8 +235,8 @@ perturbations:
   - name: TopKFeatures
     n_perturbations: 10
     params:
-      k: 5
-      lambda: 0.3
+      k: 2
+      lambda: 0.05
 
 metrics:
   - name: RelativeInputStability
@@ -221,13 +246,12 @@ metrics:
   - name: GlobalSufficiencyMetric
 
 experiment:
-  name: ExampleExperiment
-  type: BaselineExperiment
-  sample_size: 10
+  name: DissertationExperiment
+  sample_size: 500
   sample_group: TP
   random_seed: 42
-  chunk_size: 5
-  max_workers: 1
+  chunk_size: 50
+  max_workers: 4
   resume: true
   checkpoint_dir: "results/checkpoints"
   results_dir: "results"
@@ -237,9 +261,5 @@ experiment:
 ## Run
 
 ```bash
-python src/main.py --config default.yaml
+python src/main.py --config TabularLIME.yaml
 ```
-
-## License
-
-Apache License 2.0. See `LICENSE`.

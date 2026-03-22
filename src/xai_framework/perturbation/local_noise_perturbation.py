@@ -41,7 +41,7 @@ class LocalGaussianNoisePerturbation(BasePerturbation):
         already_ood: set[str] = kwargs.get("already_ood", set())
         X_perturbed = X.copy()
 
-        for feature in self.continuous_features:
+        for feature in self.perturbable_continuous_features:
             if feature in already_ood:
                 continue
 
@@ -52,6 +52,10 @@ class LocalGaussianNoisePerturbation(BasePerturbation):
             noise = self.rng.normal(
                 scale=self.lambda_param * mad, size=len(X_perturbed)
             )
-            X_perturbed[feature] = X_perturbed[feature] + noise
+            X_perturbed[feature] = X_perturbed[feature].astype(float) + noise
 
-        return self._clip_to_distribution_for(X_perturbed, exclude=already_ood)
+        X_perturbed = self._clip_to_distribution_for(X_perturbed, exclude=already_ood)
+        X_perturbed = self._round_integer_features_for(X_perturbed, exclude=already_ood)
+        X_perturbed = self._enforce_non_negative_for(X_perturbed, exclude=already_ood)
+
+        return X_perturbed
