@@ -50,42 +50,55 @@ model:
   file_path: "data/models/catboost_fraud_model_lr0.01_depth10_2026-03-20_192829.cbm"
   metadata:
     name: "CatBoost Fraud Model"
+    decision_threshold: 0.2543702382820814
 
 explainer:
-  method: TabularLIME
+  method: KernelSHAP
   params:
-    class_names: ["Fraud", "NotFraud"]
+    background_samples: 100
+    background_strategy: kmeans
+    kmeans_impute_strategy: median
+    kmeans_n_init: 10
+    kmeans_max_iter: 300
+    n_samples: 4000
     random_seed: 42
-    discretize_continuous: True
-    kernel_width: 2.0
-    num_samples: 500
-    auto_detect_binary: True
-    impute_strategy: median
 
 perturbations:
-  - name: DirectionalDrift
-    n_perturbations: 20
+  - name: LocalGaussianNoise
+    n_perturbations: 3
     random_seed: 42
     params:
-      drift_factor: 0.2
-      drift_factor_range: [0.2,0.4]
-      target_features: ["TransactionAmt"]
+      lambda: 0.2
+  # - name: DirectionalDrift
+  #   n_perturbations: 3
+  #   random_seed: 42
+  #   params:
+  #     drift_factor: 0.2
+  #     drift_factor_range: [0.2, 0.4]
+  #     target_features: ["TransactionAmt"]
+  # - name: TopKFeatures
+  #   n_perturbations: 3
+  #   random_seed: 42
+  #   params:
+  #     k: 2
+  #     lambda: 0.2
 
 metrics:
   - name: RelativeInputStability
   - name: RankBiasedOverlap
+    params:
+      W: 0.9
+      d: 5
   - name: SignConsistencyRate
-  - name: GlobalConsistencyMetric
-  - name: GlobalSufficiencyMetric
 
 experiment:
-  name: DissertationExperiment_TabularLIME_FP_Drift
+  name: KernelSHAP_N_4000_TP
   type: DissertationExperiment
-  sample_size: 500
-  sample_group: FP
+  sample_size: 20
+  sample_group: TP
   random_seed: 42
-  chunk_size: 20
-  max_workers: 4
+  chunk_size: 10
+  max_workers: 1
   resume: true
   checkpoint_dir: "results/checkpoints"
   results_dir: "results"

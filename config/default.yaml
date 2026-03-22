@@ -1,6 +1,7 @@
+# nohup python src/main.py --config FILE.yaml > logs/FILE.log 2>&1 &
 dataset:
-  train_file_path: "data/processed/splits/train_dataset_2026-03-07_13:29:54.parquet"
-  test_file_path: "data/processed/splits/test_dataset_2026-03-07_13:29:54.parquet"
+  train_file_path: "data/processed/train_val_final.parquet"
+  test_file_path: "data/processed/test_final.parquet"
   target_label: isFraud
   drop_columns:
     - TransactionID
@@ -8,18 +9,66 @@ dataset:
   metadata:
     name: "IEEE-CIS Fraud Detection"
     type: cleaned
+  categorical_features: [
+        "ProductCD",
+        "card4",
+        "card6",
+        "addr1",
+        "P_emaildomain",
+        "R_emaildomain",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "id_12",
+        "id_15",
+        "id_30",
+        "id_31",
+        "id_33",
+        "id_34",
+        "id_35",
+        "id_36",
+        "id_37",
+        "id_38",
+        "DeviceType",
+        "DeviceInfo"
+    ]
+  non_negative_features:
+    - TransactionAmt
+  non_negative_prefixes:
+    - C
+    - D
+  perturbable_categorical_features:
+  - ProductCD
+  - card4
+  - card6
+  - addr1
+  perturbable_numerical_features:
+  - TransactionAmt
+  - dist1
+
 
 model:
   architecture: CatBoost
-  file_path: "data/models/catboost_model_cleaned_2026-01-28_22:03:17.cbm"
+  file_path: "data/models/catboost_fraud_model_lr0.01_depth10_2026-03-20_192829.cbm"
   metadata:
     name: "CatBoost Fraud Model"
+
 
 explainer:
   method: KernelSHAP
   params:
-    background_samples: 50
-    n_samples: "auto"
+    background_samples: 150
+    background_strategy: stratified
+    # kmeans_impute_strategy: median
+    # kmeans_n_init: 10
+    # kmeans_max_iter: 300
+    n_samples: 1000
     random_seed: 42
 
 perturbations:
@@ -27,19 +76,19 @@ perturbations:
     n_perturbations: 3
     random_seed: 42
     params:
-      lambda: 0.5
+      lambda: 0.05
   - name: DirectionalDrift
     n_perturbations: 3
     random_seed: 42
     params:
-      drift_factor: 0.5
+      drift_factor: 0.1
       target_features: ["TransactionAmt"]
   - name: TopKFeatures
     n_perturbations: 3
     random_seed: 42
     params:
-      k: 5
-      lambda: 0.5
+      k: 2
+      lambda: 0.05
 
 metrics:
   - name: RelativeInputStability
@@ -51,8 +100,8 @@ metrics:
 
 experiment:
   name: TestExperiment
-  type: BaselineExperiment
-  sample_size: 10
+  type: DissertationExperiment
+  sample_size: 3
   sample_group: TP
   random_seed: 42
   chunk_size: 10
