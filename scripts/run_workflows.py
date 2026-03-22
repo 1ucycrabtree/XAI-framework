@@ -80,6 +80,8 @@ def parse_args() -> argparse.Namespace:
     )
     perturbation_parser.set_defaults(func=_perturbation)
 
+    return parser.parse_args()
+
 
 def main() -> None:
     logging.basicConfig(
