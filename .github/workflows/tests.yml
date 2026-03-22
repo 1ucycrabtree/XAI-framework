@@ -18,8 +18,8 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: xai_env
-          environment-file: code/environment.yml
+          environment-file: environment.yml
           auto-activate-base: false
 
       - name: Run unit tests
-        run: cd code && python -m pytest -q
+        run: python -m pytest -q
