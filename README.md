@@ -8,20 +8,20 @@ Framework for robustness evaluation of tabular explainers under controlled pertu
 docker-compose up -d --build
 docker-compose exec xai-robustness bash
 conda activate xai_env
-python src/main.py --config default.yaml
+python xai_framework main.py --config default.yaml
 ```
 
 ## Project Structure
 
 ```
-xai-robustness/
+xai-framework/
 ├── config/
 │   └── default.yaml          # Experiment variables (model, explanation method, perturbation rules)
 │   └── baseline_LIME.yaml    # Baseline experiment with TabularLIME
 │   └── baseline_SHAP.yaml    # Baseline experiment with KernelSHAP
 ├── data/                     # Mount your dataset and model here
 ├── results/                  # Outputs and checkpoints written here
-├── src/
+├── xai_framework/
 │   ├── dataset/              # Data loading (extensible)
 │   ├── experiment/           # Experiment (extensible)
 │   ├── explainer/            # Explainer wrappers (extensible)
@@ -39,7 +39,7 @@ xai-robustness/
 
 ## How It Works
 
-`src/main.py` orchestrates one run:
+`xai_framework/main.py` orchestrates one run:
 
 1. Load config (`config/*.yaml`).
 2. Load dataset/model/explainer.
@@ -57,11 +57,11 @@ experiment:
 
 The project uses decorator-based registries:
 
-- Models: `src/model/registry.py`
-- Explainers: `src/explainer/registry.py`
-- Perturbations: `src/perturbation/registry.py`
-- Metrics: `src/metric/registry.py`
-- Experiments: `src/experiment/registry.py`
+- Models: `xai_framework/model/registry.py`
+- Explainers: `xai_framework/explainer/registry.py`
+- Perturbations: `xai_framework/perturbation/registry.py`
+- Metrics: `xai_framework/metric/registry.py`
+- Experiments: `xai_framework/experiment/registry.py`
 
 To add a new component to any of the above, create a class and register it:
 
@@ -261,5 +261,5 @@ experiment:
 ## Run
 
 ```bash
-python src/main.py --config TabularLIME.yaml
+python xai_framework/main.py --config TabularLIME.yaml
 ```
