@@ -62,6 +62,9 @@ def parse_args() -> argparse.Namespace:
 
 
 class CatBoostTrainer:
+    # Addr1 and Addr2 are numeric but represent location categories. Treat them as categorical to preserve their semantic meaning and leverage CatBoost's handling of categorical features.  # noqa: E501
+    FORCED_CATEGORICAL_COLS = {"addr1", "addr2"}
+
     def __init__(
         self,
         train_val_path: Path,
@@ -347,7 +350,7 @@ class CatBoostTrainer:
         logging.info("Loaded files.")
 
     def _memory_optimisation(self) -> None:
-        for cat_feat in self.metadata["categorical_cols"]:
+        for cat_feat in self._resolved_categorical_cols():
             if cat_feat in self.train_val_df.columns:
                 self.train_val_df[cat_feat] = self.train_val_df[cat_feat].astype(str)
             if cat_feat in self.test_df.columns:
@@ -369,6 +372,15 @@ class CatBoostTrainer:
                 )
             if col in self.test_df.columns:
                 self.test_df[col] = pd.to_numeric(self.test_df[col], downcast="float")
+
+    def _resolved_categorical_cols(self) -> list[str]:
+        metadata_cats = set(self.metadata.get("categorical_cols", []))
+        available_forced = {
+            c
+            for c in self.FORCED_CATEGORICAL_COLS
+            if c in self.train_val_df.columns or c in self.test_df.columns
+        }
+        return sorted(metadata_cats.union(available_forced))
 
     def _prepare_datasets(self) -> None:
         self._memory_optimisation()
@@ -404,16 +416,13 @@ class CatBoostTrainer:
         )
         self.y_test = self.test_df[self.target]
 
-        self.cat_feature_names = [
-            c for c in self.metadata["categorical_cols"] if c in self.X_train.columns
-        ]
+        resolved_cats = self._resolved_categorical_cols()
+        self.cat_feature_names = [c for c in resolved_cats if c in self.X_train.columns]
         self.cat_feature_indices = [
             self.X_train.columns.get_loc(c) for c in self.cat_feature_names
         ]
 
-        missing_cat = set(self.metadata["categorical_cols"]) - set(
-            self.cat_feature_names
-        )
+        missing_cat = set(resolved_cats) - set(self.cat_feature_names)
         if missing_cat:
             logging.warning(
                 "Some metadata categorical columns are absent after "

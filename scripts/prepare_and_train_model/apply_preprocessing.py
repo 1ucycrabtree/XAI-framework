@@ -11,6 +11,9 @@ logging.basicConfig(
 
 
 class DataPreprocessor:
+    # Addr1 and Addr2 are numeric but represent location categories. Treat them as categorical to preserve their semantic meaning and leverage CatBoost's handling of categorical features.  # noqa: E501
+    FORCED_CATEGORICAL_COLS = {"addr1", "addr2"}
+
     def __init__(self, metadata_path: str):
         with open(metadata_path, "r") as f:
             self.metadata = json.load(f)
@@ -78,6 +81,11 @@ class DataPreprocessor:
         categorical_cols = [
             c for c in final_features if not pd.api.types.is_numeric_dtype(train_df[c])
         ]
+        categorical_cols = sorted(
+            set(categorical_cols).union(
+                c for c in self.FORCED_CATEGORICAL_COLS if c in final_features
+            )
+        )
         numerical_cols = [c for c in final_features if c not in categorical_cols]
 
         self.metadata.update(
