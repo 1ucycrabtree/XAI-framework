@@ -45,10 +45,30 @@ class CatBoostFraudModel(BaseModel):
             raise
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
+        X_prepared = self._prepare_catboost_input(X)
         if self.decision_threshold is None:
-            return self.model.predict(X)
-        probs = self.model.predict_proba(X)[:, 1]
+            return self.model.predict(X_prepared)
+        probs = self.model.predict_proba(X_prepared)[:, 1]
         return (probs >= self.decision_threshold).astype(int)
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
-        return self.model.predict_proba(X)
+        X_prepared = self._prepare_catboost_input(X)
+        return self.model.predict_proba(X_prepared)
+
+    def _prepare_catboost_input(self, X: pd.DataFrame) -> pd.DataFrame:
+        if not isinstance(X, pd.DataFrame):
+            return X
+
+        X_prepared = X.copy()
+        feature_names = list(self.model.feature_names_ or X_prepared.columns.tolist())
+        cat_feature_indices = self.model.get_cat_feature_indices()
+
+        for idx in cat_feature_indices:
+            if idx < 0 or idx >= len(feature_names):
+                continue
+            col = feature_names[idx]
+            if col not in X_prepared.columns:
+                continue
+            X_prepared[col] = X_prepared[col].fillna("missing").astype(str)
+
+        return X_prepared
