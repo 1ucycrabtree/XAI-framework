@@ -28,6 +28,25 @@ python scripts/run_workflows.py train --tune
 python scripts/run_workflows.py perturbation
 ```
 
+## Parallel Launcher
+
+Launch all KernelSHAP + TabularLIME configs in parallel:
+
+```bash
+bash scripts/launch_parallel_experiments.sh
+```
+
+Run detached:
+
+```bash
+nohup bash scripts/launch_parallel_experiments.sh > logs/launcher.log 2>&1 &
+```
+
+Resource behaviour:
+- KernelSHAP: 1 core per process (`OMP_NUM_THREADS=1`, `MKL_NUM_THREADS=1`).
+- TabularLIME: uses remaining cores, up to 4 cores per process.
+- Requires at least 12 cores to launch all jobs concurrently.
+
 ## Project Structure
 
 ```
