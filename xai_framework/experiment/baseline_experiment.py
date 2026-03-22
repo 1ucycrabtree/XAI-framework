@@ -15,8 +15,8 @@ from metric.base_metric import BaseGlobalMetric, BaseLocalMetric
 from utils.json_utils import read_json, write_json_atomic
 
 
-@EXPERIMENTS.register_module("BaselineExperiment")
-class BaselineExperiment(SampleGroupMixin, BaseExperiment):
+@EXPERIMENTS.register_module("DissertationExperiment")
+class DissertationExperiment(SampleGroupMixin, BaseExperiment):
     def __init__(
         self,
         cfg,
@@ -31,7 +31,7 @@ class BaselineExperiment(SampleGroupMixin, BaseExperiment):
         explainer_factory: Callable[[int], Any],
         perturbation_factory: Callable[[int], Any],
     ):
-        super().__init__(cfg=cfg, name="BaselineExperiment")
+        super().__init__(cfg=cfg, name="DissertationExperiment")
         self.dataset = dataset
         self.model = model
         self.explainer_method_name = explainer_method_name
@@ -161,6 +161,9 @@ class BaselineExperiment(SampleGroupMixin, BaseExperiment):
             "feature_names": perturbed_explanations.feature_names,
             "baseline_rows": baseline_records,
             "perturbed_rows": perturbed_records,
+            "perturbation_instance_logs": (perturbed_explanations.metadata or {}).get(
+                "perturbation_instance_logs", []
+            ),
             "baseline_explanations": [
                 self._serialize_explanation(exp)
                 for exp in baseline_explanations.instances
@@ -212,6 +215,16 @@ class BaselineExperiment(SampleGroupMixin, BaseExperiment):
             )
 
         perturbed_explanations = explainer.explain(perturbed_data)
+        perturbation_instance_logs = []
+        if hasattr(perturbation_strategy, "get_last_instance_logs"):
+            perturbation_instance_logs = (
+                perturbation_strategy.get_last_instance_logs() or []
+            )
+        if perturbed_explanations.metadata is None:
+            perturbed_explanations.metadata = {}
+        perturbed_explanations.metadata["perturbation_instance_logs"] = (
+            perturbation_instance_logs
+        )
         return (
             chunk_id,
             chunk_data,
@@ -222,6 +235,13 @@ class BaselineExperiment(SampleGroupMixin, BaseExperiment):
 
     def _load_chunk_output(self, chunk_id: int) -> dict[str, Any]:
         return read_json(self.chunks_dir / f"chunk_{chunk_id}.json")
+
+    def _collect_perturbation_logs(self, chunk_df: pd.DataFrame) -> list[dict]:
+        logs: list[dict] = []
+        for _, row in chunk_df.sort_values("chunk_id").iterrows():
+            payload = self._load_chunk_output(int(row["chunk_id"]))
+            logs.extend(payload.get("perturbation_instance_logs", []))
+        return logs
 
     def _rebuild_explanation_results(
         self, chunk_df: pd.DataFrame
@@ -478,6 +498,31 @@ class BaselineExperiment(SampleGroupMixin, BaseExperiment):
                 baseline_explanations=baseline_explanations,
                 perturbed_explanations=perturbed_explanations,
             )
+
+            perturbation_logs = self._collect_perturbation_logs(chunk_df)
+            for log_row in perturbation_logs:
+                result.add_metric("PerturbationLog_with_ids", log_row)
+            if perturbation_logs:
+                realised = [
+                    int(row.get("realised_k", 0))
+                    for row in perturbation_logs
+                    if "realised_k" in row
+                ]
+                eligible = [
+                    int(row.get("eligible_perturbable", 0))
+                    for row in perturbation_logs
+                    if "eligible_perturbable" in row
+                ]
+                if realised:
+                    result.add_metric(
+                        "PerturbationLog_realised_k_mean",
+                        float(np.mean(realised)),
+                    )
+                if eligible:
+                    result.add_metric(
+                        "PerturbationLog_eligible_perturbable_mean",
+                        float(np.mean(eligible)),
+                    )
 
             result.save(str(self.result_path))
             manifest["status"] = "completed"

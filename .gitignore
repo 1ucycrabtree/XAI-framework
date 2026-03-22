@@ -8,5 +8,5 @@ __pycache__/
 .ruff_cache/
 
 data/
-results/
-checkpoints/
+
+**metadata/

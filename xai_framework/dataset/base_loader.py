@@ -78,6 +78,10 @@ class BaseDataLoader(ABC):
             target_label=self.cfg.target_label,
             feature_names=list(X.columns),
             exclude_columns=self.cfg.drop_columns,
+            categorical_features=self.cfg.categorical_features,
+            integer_features=self.cfg.integer_features,
+            non_negative_features=self.cfg.non_negative_features,
+            non_negative_prefixes=self.cfg.non_negative_prefixes,
             metadata={
                 "source": self.__class__.__name__,
                 "split": split,

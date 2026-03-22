@@ -11,6 +11,10 @@ class Dataset:
         target_label: str,
         feature_names: list[str] | None = None,
         exclude_columns: list[str] | None = None,
+        categorical_features: list[str] | None = None,
+        integer_features: list[str] | None = None,
+        non_negative_features: list[str] | None = None,
+        non_negative_prefixes: list[str] | None = None,
         metadata: dict | None = None,
     ):
         self.__X = X  # Use a private attribute to prevent accidental usage of original X df  # noqa: E501
@@ -18,6 +22,10 @@ class Dataset:
         self.target_label = target_label
         self.feature_names = feature_names or list(self.__X.columns)
         self.exclude_columns = exclude_columns or []
+        self.categorical_features = categorical_features or []
+        self.integer_features = integer_features or []
+        self.non_negative_features = non_negative_features or []
+        self.non_negative_prefixes = non_negative_prefixes or []
         self.metadata = metadata or {}
 
         self._validate()
@@ -50,6 +58,29 @@ class Dataset:
                 logging.warning(
                     f"Exclude columns not found in dataset (already removed?): {missing}. "  # noqa: E501
                     f"These will be ignored."
+                )
+        if self.categorical_features:
+            missing = [
+                c for c in self.categorical_features if c not in self.__X.columns
+            ]
+            if missing:
+                logging.warning(
+                    f"Categorical features not found in dataset (ignored): {missing}."
+                )
+        if self.integer_features:
+            missing = [c for c in self.integer_features if c not in self.__X.columns]
+            if missing:
+                logging.warning(
+                    f"Integer-like features not found in dataset (ignored): {missing}."
+                )
+        if self.non_negative_features:
+            missing = [
+                c for c in self.non_negative_features if c not in self.__X.columns
+            ]
+            if missing:
+                logging.warning(
+                    "Non-negative features not found in dataset (ignored): %s.",
+                    missing,
                 )
         if self.metadata and not isinstance(self.metadata, dict):
             raise ValueError("Metadata must be a dictionary")

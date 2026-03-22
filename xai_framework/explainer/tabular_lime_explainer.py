@@ -9,6 +9,7 @@ from sklearn.preprocessing import LabelEncoder
 
 from explainer.base_explainer import BaseDatasetExplainer
 from explainer.explanation_result import ExplanationResult
+from explainer.impute_utils import check_impute_strategy, get_impute_fn
 from explainer.registry import EXPLAINERS
 
 
@@ -21,9 +22,14 @@ class TabularLimeWrapper(BaseDatasetExplainer):
         self.col_order = list(self.train_dataset.X_model.columns)
         self.random_seed = params["random_seed"]
         self.num_samples = params["num_samples"]
-        self.cat_cols = list(params["categorical_features"])
+        if "categorical_features" in parameters:
+            logging.warning(
+                "TabularLIME 'categorical_features' in explainer params is ignored. "
+                "Using dataset.categorical_features instead."
+            )
+        self.cat_cols = list(self.train_dataset.categorical_features or [])
         self.strategy_name = params["impute_strategy"]
-        self.strategy = _get_impute_fn(self.strategy_name)
+        self.strategy = get_impute_fn(self.strategy_name)
 
         if params["auto_detect_binary"]:
             logging.info("Auto-detection of binary features enabled.")
@@ -271,7 +277,6 @@ class TabularLimeWrapper(BaseDatasetExplainer):
             raise ValueError("Inf values detected in encoded sample before LIME.")
 
 
-_REQUIRED_PARAMS = ["categorical_features"]
 _OPTIONAL_PARAMS_DEFAULTS = {
     "kernel_width": 0.75,
     "discretize_continuous": False,
@@ -292,14 +297,6 @@ def _validate_params(params: dict) -> dict:
 
     resolved = {}
 
-    for key in _REQUIRED_PARAMS:
-        if key not in params or params[key] is None:
-            raise ValueError(
-                f"TabularLIME requires '{key}' in explainer params. "
-                f"All required keys: {_REQUIRED_PARAMS}"
-            )
-        resolved[key] = params[key]
-
     for key, default in _OPTIONAL_PARAMS_DEFAULTS.items():
         if key not in params or params[key] is None:
             logging.warning(
@@ -308,27 +305,7 @@ def _validate_params(params: dict) -> dict:
             resolved[key] = default
         else:
             if key == "impute_strategy":
-                _check_impute_strategy(params[key])
+                check_impute_strategy(params[key])
             resolved[key] = params[key]
 
     return resolved
-
-
-def _check_impute_strategy(strategy: str) -> None:
-    valid_strategies = {"median", "most_frequent", "zero", "mean", "none"}
-    if strategy not in valid_strategies:
-        raise ValueError(
-            f"Invalid impute_strategy '{strategy}' in params. "
-            f"Supported strategies: {valid_strategies}."
-        )
-
-
-def _get_impute_fn(strategy: str):
-    strategies = {
-        "median": lambda col: col.median(),
-        "most_frequent": lambda col: col.mode()[0],
-        "zero": lambda col: 0,
-        "mean": lambda col: col.mean(),
-        "none": lambda col: col,
-    }
-    return strategies.get(strategy)
