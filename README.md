@@ -8,7 +8,7 @@ Framework for robustness evaluation of tabular explainers under controlled pertu
 docker-compose up -d --build
 docker-compose exec xai-robustness bash
 conda activate xai_env
-python xai_framework main.py --config default.yaml
+python -m xai_framework --config default.yaml
 ```
 
 ## Project Structure
@@ -261,5 +261,5 @@ experiment:
 ## Run
 
 ```bash
-python xai_framework/main.py --config TabularLIME.yaml
+python -m xai_framework --config TabularLIME.yaml
 ```
