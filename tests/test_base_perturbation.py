@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pytest
-
 from load_config import PerturbationConfig
 from perturbation.local_noise_perturbation import LocalGaussianNoisePerturbation
 
@@ -31,14 +30,14 @@ def test_ood_detection_and_clipping():
     perturb = LocalGaussianNoisePerturbation(cfg, training_data=train)
 
     row_high = pd.DataFrame(
-        {"x": [200.0], "y": [0.0], "int_f": [0.0], "const": [1.0], "cat": ["A"], "imm": [7.0]}
+        {"x": [200.0], "y": [0.0], "int_f": [0.0], "const": [1.0], "cat": ["A"], "imm": [7.0]}  # noqa: E501
     )
     assert not perturb._is_in_distribution(row_high)
     clipped = perturb._clip_to_distribution(row_high)
     assert clipped["x"].iloc[0] == pytest.approx(95.0, rel=1e-6)
 
     row_low = pd.DataFrame(
-        {"x": [-50.0], "y": [0.0], "int_f": [0.0], "const": [1.0], "cat": ["A"], "imm": [7.0]}
+        {"x": [-50.0], "y": [0.0], "int_f": [0.0], "const": [1.0], "cat": ["A"], "imm": [7.0]}  # noqa: E501
     )
     clipped_low = perturb._clip_to_distribution(row_low)
     assert clipped_low["x"].iloc[0] == pytest.approx(5.0, rel=1e-6)

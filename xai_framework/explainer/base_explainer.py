@@ -3,7 +3,6 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-
 from dataset.dataset import Dataset
 from explainer.explanation import Explanation
 from explainer.explanation_result import ExplanationResult

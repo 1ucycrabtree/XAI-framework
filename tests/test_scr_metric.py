@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from explainer.explanation import Explanation
 from load_config import MetricConfig
 from metric.scr_metric import SignConsistencyRate

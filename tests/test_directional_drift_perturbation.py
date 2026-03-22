@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pytest
-
 from load_config import PerturbationConfig
 from perturbation.direction_drift_perturbation import DirectionalDriftPerturbation
 

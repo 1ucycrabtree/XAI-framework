@@ -4,7 +4,6 @@ from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
-
 from experiment.base_experiment import BaseExperiment
 from experiment.experiment_result import ExperimentResult
 from experiment.registry import EXPERIMENTS

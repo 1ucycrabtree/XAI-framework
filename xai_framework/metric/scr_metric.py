@@ -1,5 +1,4 @@
 import numpy as np
-
 from explainer.explanation import Explanation
 from metric.base_metric import BaseLocalMetric
 from metric.registry import METRICS

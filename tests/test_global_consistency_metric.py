@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from explainer.explanation import Explanation
 from explainer.explanation_result import ExplanationResult
 from load_config import MetricConfig

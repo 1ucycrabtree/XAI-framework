@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pytest
-
 from explainer.explanation import Explanation
 from load_config import MetricConfig
 from metric.ris_metric import RelativeInputStabilityMetric

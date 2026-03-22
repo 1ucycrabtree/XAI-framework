@@ -4,7 +4,6 @@ import argparse
 import logging
 import subprocess
 import sys
-import uuid
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

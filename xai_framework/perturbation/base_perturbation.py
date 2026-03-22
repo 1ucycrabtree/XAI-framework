@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import pandas as pd
-
 from load_config import PerturbationConfig
 
 MAX_OOD_RETRIES = 5

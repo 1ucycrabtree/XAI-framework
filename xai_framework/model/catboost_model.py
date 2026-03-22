@@ -3,7 +3,6 @@ import logging
 import numpy as np
 import pandas as pd
 from catboost import CatBoostClassifier
-
 from load_config import ModelConfig
 from model.base_model import BaseModel
 from model.registry import MODELS

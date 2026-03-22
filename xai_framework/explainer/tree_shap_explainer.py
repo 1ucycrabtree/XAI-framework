@@ -1,6 +1,5 @@
 import pandas as pd
 import shap
-
 from explainer.base_explainer import BaseExplainer
 from explainer.explanation_result import ExplanationResult
 from explainer.registry import EXPLAINERS

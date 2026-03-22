@@ -4,13 +4,12 @@ import time
 
 import numpy as np
 import pandas as pd
-from lime import lime_tabular
-from sklearn.preprocessing import LabelEncoder
-
 from explainer.base_explainer import BaseDatasetExplainer
 from explainer.explanation_result import ExplanationResult
 from explainer.impute_utils import check_impute_strategy, get_impute_fn
 from explainer.registry import EXPLAINERS
+from lime import lime_tabular
+from sklearn.preprocessing import LabelEncoder
 
 
 @EXPLAINERS.register_module("TabularLIME")

@@ -2,7 +2,6 @@ from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
-
 from explainer.explanation import Explanation
 from explainer.explanation_result import ExplanationResult
 from metric.base_metric import BaseGlobalMetric

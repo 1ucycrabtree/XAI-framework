@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-
 from explainer.base_explainer import ExplanationResult
 from perturbation.base_perturbation import (
     BasePerturbation,

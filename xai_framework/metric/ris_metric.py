@@ -2,7 +2,6 @@ import logging
 
 import numpy as np
 import pandas as pd
-
 from explainer.explanation import Explanation
 from metric.base_metric import BaseLocalMetric
 from metric.registry import METRICS

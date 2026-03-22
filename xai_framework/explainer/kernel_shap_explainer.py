@@ -3,14 +3,13 @@ import logging
 import numpy as np
 import pandas as pd
 import shap
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
-
 from dataset.dataset import Dataset
 from explainer.base_explainer import BaseDatasetExplainer
 from explainer.explanation_result import ExplanationResult
 from explainer.impute_utils import check_impute_strategy, get_impute_fn
 from explainer.registry import EXPLAINERS
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 
 
 @EXPLAINERS.register_module("KernelSHAP")

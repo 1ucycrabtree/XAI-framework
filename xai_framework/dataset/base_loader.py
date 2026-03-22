@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 import pandas as pd
-
 from dataset.dataset import Dataset
 from dataset.dataset_pair import DatasetPair
 from load_config import DatasetConfig

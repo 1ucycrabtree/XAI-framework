@@ -1,5 +1,4 @@
 import pytest
-
 from load_config import MetricConfig
 from metric.base_metric import BaseGlobalMetric, BaseLocalMetric
 

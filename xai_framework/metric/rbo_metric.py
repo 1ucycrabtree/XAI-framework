@@ -1,9 +1,8 @@
 import numpy as np
-from scipy.optimize import root_scalar
-
 from explainer.explanation import Explanation
 from metric.base_metric import BaseLocalMetric
 from metric.registry import METRICS
+from scipy.optimize import root_scalar
 
 
 @METRICS.register_module("RankBiasedOverlap")
