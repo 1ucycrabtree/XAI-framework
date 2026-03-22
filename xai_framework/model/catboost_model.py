@@ -56,19 +56,26 @@ class CatBoostFraudModel(BaseModel):
         return self.model.predict_proba(X_prepared)
 
     def _prepare_catboost_input(self, X: pd.DataFrame) -> pd.DataFrame:
-        if not isinstance(X, pd.DataFrame):
-            return X
+        feature_names = list(self.model.feature_names_ or [])
+        if isinstance(X, pd.DataFrame):
+            X_prepared = X.copy()
+        else:
+            array_input = np.asarray(X)
+            if array_input.ndim == 1:
+                array_input = array_input.reshape(1, -1)
+            if array_input.ndim != 2:
+                return X
+            if feature_names and array_input.shape[1] == len(feature_names):
+                X_prepared = pd.DataFrame(array_input, columns=feature_names)
+            else:
+                return X
 
-        X_prepared = X.copy()
-        feature_names = list(self.model.feature_names_ or X_prepared.columns.tolist())
         cat_feature_indices = self.model.get_cat_feature_indices()
 
         for idx in cat_feature_indices:
-            if idx < 0 or idx >= len(feature_names):
+            if idx < 0 or idx >= len(X_prepared.columns):
                 continue
-            col = feature_names[idx]
-            if col not in X_prepared.columns:
-                continue
+            col = X_prepared.columns[idx]
             X_prepared[col] = X_prepared[col].fillna("missing").astype(str)
 
         return X_prepared
