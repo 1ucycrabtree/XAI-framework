@@ -1,20 +1,8 @@
-#!/usr/bin/env python3
-"""Parameter calibration runner for perturbation locality/OOD checks.
-
-Design goals:
-- Sample fixed counts from TP/FP groups.
-- Generate perturbations only (no SHAP/LIME explainers are run).
-- Sweep parameter grids for lambda, drift ranges, and K.
-- Emit value-only diagnostics to inspect whether perturbations are too local
-  or too far/out-of-distribution.
-"""
-
 from __future__ import annotations
 
 import argparse
 import json
 import logging
-import sys
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -22,28 +10,19 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import yaml
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SRC_ROOT = REPO_ROOT / "src"
-if str(SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SRC_ROOT))
-
-import dataset  # noqa: F401
-import model  # noqa: F401
-import perturbation  # noqa: F401
-from dataset.registry import get_dataset
-from explainer.explanation import Explanation
-from explainer.explanation_result import ExplanationResult
-from load_config import PerturbationConfig, load_config
-from model.registry import get_model
-from perturbation.registry import get_perturbation
+from dataset.registry import get_dataset  # type: ignore
+from explainer.explanation import Explanation  # type: ignore
+from explainer.explanation_result import ExplanationResult  # type: ignore
+from load_config import PerturbationConfig, load_config  # type: ignore
+from model.registry import get_model  # type: ignore
+from perturbation.registry import get_perturbation  # type: ignore
 
 logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Calibrate perturbation params (lambda, drift range, K) on values only"
+        description="Calibrate perturbation params (lambda, drift range, K) on values only"  # noqa: E501
     )
     parser.add_argument(
         "--config",
@@ -62,11 +41,11 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_calibration_yaml(config_name: str) -> dict[str, Any]:
-    path = REPO_ROOT / "config" / config_name
+    path = Path(f"config/{config_name}")
     if not path.exists():
         raise FileNotFoundError(f"Calibration config not found: {path}")
 
-    with path.open("r", encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
     if not isinstance(cfg, dict):
@@ -128,12 +107,16 @@ def sample_instances(
     return out
 
 
-def normalised_ranges(train_df: pd.DataFrame, numeric_cols: list[str]) -> dict[str, float]:
+def normalised_ranges(
+    train_df: pd.DataFrame, numeric_cols: list[str]
+) -> dict[str, float]:
     ranges: dict[str, float] = {}
     for col in numeric_cols:
         col_min = pd.to_numeric(train_df[col], errors="coerce").min()
         col_max = pd.to_numeric(train_df[col], errors="coerce").max()
-        width = float(col_max - col_min) if pd.notna(col_max) and pd.notna(col_min) else 0.0
+        width = (
+            float(col_max - col_min) if pd.notna(col_max) and pd.notna(col_min) else 0.0
+        )
         ranges[col] = width if width > 0 else 1.0
     return ranges
 
@@ -235,7 +218,7 @@ def build_trials(cal_cfg: dict[str, Any], n_perturbations: int) -> list[dict[str
         for drift_range in drift_cfg.get("drift_factor_ranges", []):
             if not isinstance(drift_range, (list, tuple)) or len(drift_range) != 2:
                 raise ValueError(
-                    "Each directional_drift.drift_factor_ranges entry must be [low, high]."
+                    "Each directional_drift.drift_factor_ranges entry must be [low, high]."  # noqa: E501
                 )
             params = {
                 "drift_factor": drift_factor,
@@ -402,26 +385,28 @@ def summarise_pairs(pair_df: pd.DataFrame) -> pd.DataFrame:
     summaries: list[dict[str, Any]] = []
 
     if pair_df.empty:
-        return pd.DataFrame(columns=[
-            "sample_group",
-            "perturbation",
-            "params",
-            "n_pairs",
-            "n_instances",
-            "gower_mean",
-            "gower_median",
-            "gower_p05",
-            "gower_p95",
-            "numeric_delta_mean",
-            "numeric_delta_max_mean",
-            "continuous_tight_distance_mean",
-            "continuous_tight_distance_max_mean",
-            "changed_feature_count_mean",
-            "categorical_change_rate_mean",
-            "ood_any_rate",
-            "too_local_rate",
-            "too_far_rate",
-        ])
+        return pd.DataFrame(
+            columns=[
+                "sample_group",
+                "perturbation",
+                "params",
+                "n_pairs",
+                "n_instances",
+                "gower_mean",
+                "gower_median",
+                "gower_p05",
+                "gower_p95",
+                "numeric_delta_mean",
+                "numeric_delta_max_mean",
+                "continuous_tight_distance_mean",
+                "continuous_tight_distance_max_mean",
+                "changed_feature_count_mean",
+                "categorical_change_rate_mean",
+                "ood_any_rate",
+                "too_local_rate",
+                "too_far_rate",
+            ]
+        )
 
     for keys, g in pair_df.groupby(group_cols, dropna=False):
         sample_group, perturbation_name, params = keys
@@ -445,7 +430,9 @@ def summarise_pairs(pair_df: pd.DataFrame) -> pd.DataFrame:
                     g["continuous_tight_distance_max"].mean()
                 ),
                 "changed_feature_count_mean": float(g["changed_feature_count"].mean()),
-                "categorical_change_rate_mean": float(g["categorical_change_rate"].mean()),
+                "categorical_change_rate_mean": float(
+                    g["categorical_change_rate"].mean()
+                ),
                 "ood_any_rate": float(g["ood_any"].mean()),
                 "too_local_rate": float(g["too_local"].mean()),
                 "too_far_rate": float(g["too_far"].mean()),
@@ -530,7 +517,7 @@ def main() -> None:
             "CatBoost feature importances length does not match model feature names."
         )
 
-    output_dir = REPO_ROOT / str(cal_cfg["output_dir"])
+    output_dir = Path(str(cal_cfg["output_dir"]))
     output_dir.mkdir(parents=True, exist_ok=True)
 
     selected_rows: list[dict[str, Any]] = []
@@ -543,7 +530,9 @@ def main() -> None:
             len(sample_df),
         )
         for instance_id in sample_df.index:
-            selected_rows.append({"sample_group": sample_group, "instance_id": instance_id})
+            selected_rows.append(
+                {"sample_group": sample_group, "instance_id": instance_id}
+            )
 
         topk_explanations = make_constant_importance_explanations(
             sample_df=sample_df,

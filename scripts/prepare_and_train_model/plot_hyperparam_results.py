@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
@@ -8,6 +7,17 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def resolve_repo_path(raw_path: str | None) -> Path | None:
+    if raw_path is None:
+        return None
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    return path
 
 
 def parse_args() -> argparse.Namespace:
@@ -45,9 +55,11 @@ def latest_hyperparam_file(base: Path) -> Path:
 
 def build_output_dir(input_file: Path, explicit: str | None) -> Path:
     if explicit:
-        out = Path(explicit)
+        out = resolve_repo_path(explicit)
     else:
         out = input_file.parent / f"plots_{input_file.stem}"
+    if out is None:
+        raise ValueError("Could not resolve output directory path.")
     out.mkdir(parents=True, exist_ok=True)
     return out
 
@@ -117,6 +129,7 @@ def plot_tradeoff(trials: pd.DataFrame, out_file: Path, selected: dict) -> None:
     plt.tight_layout()
     plt.savefig(out_file, dpi=250)
     plt.close()
+
 
 def plot_best_iteration_vs_f2(
     trials: pd.DataFrame, out_file: Path, selected: dict
@@ -198,8 +211,14 @@ def plot_marginal_gain_if_available(trials: pd.DataFrame, out_file: Path) -> boo
 def main() -> None:
     args = parse_args()
 
-    eval_dir = Path("data/models/evaluation_outputs")
-    input_path = Path(args.input) if args.input else latest_hyperparam_file(eval_dir)
+    eval_dir = REPO_ROOT / "data" / "models" / "evaluation_outputs"
+    if args.input:
+        input_path = resolve_repo_path(args.input)
+    else:
+        input_path = latest_hyperparam_file(eval_dir)
+
+    if input_path is None:
+        raise ValueError("Could not resolve input path.")
 
     if not input_path.exists():
         raise FileNotFoundError(f"Input file not found: {input_path}")

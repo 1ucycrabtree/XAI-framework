@@ -1,8 +1,9 @@
-import pandas as pd
-import numpy as np
 import json
 import logging
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -26,7 +27,7 @@ class DataPreprocessor:
         self.target = "isFraud"
 
     def process(self, raw_path: Path, output_path: Path) -> None:
-        """Apply preprocessing rules to the raw dataset and save the processed version."""
+        """Apply preprocessing rules to the raw dataset and save the processed version."""  # noqa: E501
         logging.info(f"Loading and merging datasets from {raw_path}...")
         trans = pd.read_csv(raw_path / "train_transaction.csv")
         ident = pd.read_csv(raw_path / "train_identity.csv")
@@ -145,7 +146,7 @@ class DataPreprocessor:
         return df.drop(columns=self.cols_to_drop, errors="ignore")
 
     def _add_stable_time_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Build stable, coarse-grained time features from TransactionDT and keep raw timestamp out of training."""
+        """Build stable, coarse-grained time features from TransactionDT and keep raw timestamp out of training."""  # noqa: E501
         if self.raw_time_col not in df.columns:
             return df
 
@@ -162,7 +163,7 @@ class DataPreprocessor:
                 "time_hour_of_day": hour_of_day,
                 "time_day_of_week": day_of_week,
                 "time_is_weekend": day_of_week.isin([5, 6]).astype("int64"),
-                # Cyclical encodings preserve circular structure (e.g. 23h adjacent to 0h).
+                # Cyclical encodings preserve circular structure (e.g. 23h adjacent to 0h).  # noqa: E501
                 "time_hour_sin": np.sin((2 * np.pi * hour_of_day) / 24.0),
                 "time_hour_cos": np.cos((2 * np.pi * hour_of_day) / 24.0),
                 "time_dow_sin": np.sin((2 * np.pi * day_of_week) / 7.0),
@@ -173,7 +174,8 @@ class DataPreprocessor:
         return pd.concat([df, engineered], axis=1)
 
     def _impute_categorical(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Impute missing values in categorical columns with "missing" to avoid type mixing and leverage CatBoost's native encoding of categories."""
+        """Impute missing values in categorical columns with "missing" to avoid
+        type mixing and leverage CatBoost's native encoding of categories."""
         for col in self.categorical_cols:
             if col in df.columns:
                 df[col] = df[col].fillna("missing").astype(str)

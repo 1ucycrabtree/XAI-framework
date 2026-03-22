@@ -1,10 +1,11 @@
-import pandas as pd
-import numpy as np
+import csv
 import json
 import logging
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import scipy.stats as ss
-import csv
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -68,7 +69,8 @@ class MetadataGenerator:
     def _prune_redundant(
         self, df: pd.DataFrame, matrix: pd.DataFrame, method: str, source: str
     ) -> None:
-        """Identify correlated groups and keep a representative with less missingness."""
+        """Identify correlated groups and keep a representative with
+        less missingness."""
         logging.info(
             "Identifying redundant features with %s > %.2f...",
             method,
@@ -110,7 +112,9 @@ class MetadataGenerator:
 
             representative = min(
                 active_component,
-                key=lambda c: self._representative_sort_key(df=df, col=c, method=method),
+                key=lambda c: self._representative_sort_key(
+                    df=df, col=c, method=method
+                ),
             )
             dropped = [c for c in active_component if c != representative]
 
@@ -134,7 +138,8 @@ class MetadataGenerator:
     def _representative_sort_key(
         self, df: pd.DataFrame, col: str, method: str
     ) -> tuple[float, float, str]:
-        """Rank representative candidates by missingness, then informational richness, then name.
+        """Rank representative candidates by missingness,
+        then informational richness, then name.
 
         Lower tuple is better:
         1) lower missingness (ascending)
@@ -237,7 +242,7 @@ class MetadataGenerator:
             null_groups[mask_key].append(col)
 
         logging.info(
-            f"Identified {len(null_groups)} groups of columns with identical null patterns."
+            f"Identified {len(null_groups)} groups of columns with identical null patterns."  # noqa: E501
         )
         for i, group in enumerate(null_groups.values(), start=1):
             self._get_collinear(
@@ -252,7 +257,7 @@ class MetadataGenerator:
                 and c not in self.rules["sparse_cols"] + self.rules["redundant_cols"]
             ]
             logging.info(
-                f"Analysing {len(cols)} columns with prefix '{prefix}' for collinearity..."
+                f"Analysing {len(cols)} columns with prefix '{prefix}' for collinearity..."  # noqa: E501
             )
             self._get_collinear(train_df, cols, group_source=f"prefix_{prefix}")
 

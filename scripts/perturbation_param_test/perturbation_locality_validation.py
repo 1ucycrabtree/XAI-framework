@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -17,18 +16,10 @@ import yaml
 # Save plots in headless environments.
 matplotlib.use("Agg")
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SRC_ROOT = REPO_ROOT / "src"
-if str(SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SRC_ROOT))
-
-import dataset  # noqa: F401
-import model  # noqa: F401
-import perturbation  # noqa: F401
-from dataset.registry import get_dataset
-from load_config import PerturbationConfig, load_config
-from model.registry import get_model
-from perturbation.registry import get_perturbation
+from dataset.registry import get_dataset  # type: ignore
+from load_config import PerturbationConfig, load_config  # type: ignore
+from model.registry import get_model  # type: ignore
+from perturbation.registry import get_perturbation  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +43,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_yaml(config_name: str) -> dict[str, Any]:
-    path = REPO_ROOT / "config" / config_name
+    path = Path("config") / config_name
     if not path.exists():
         raise FileNotFoundError(f"Config not found: {path}")
     with path.open("r", encoding="utf-8") as f:
@@ -138,12 +129,16 @@ def is_noop_perturbation(base_row: pd.Series, pert_row: pd.Series) -> bool:
     return True
 
 
-def normalised_ranges(train_df: pd.DataFrame, numeric_cols: list[str]) -> dict[str, float]:
+def normalised_ranges(
+    train_df: pd.DataFrame, numeric_cols: list[str]
+) -> dict[str, float]:  # noqa: E501
     ranges: dict[str, float] = {}
     for col in numeric_cols:
         col_min = pd.to_numeric(train_df[col], errors="coerce").min()
         col_max = pd.to_numeric(train_df[col], errors="coerce").max()
-        width = float(col_max - col_min) if pd.notna(col_max) and pd.notna(col_min) else 0.0
+        width = (
+            float(col_max - col_min) if pd.notna(col_max) and pd.notna(col_min) else 0.0
+        )
         ranges[col] = width if width > 0 else 1.0
     return ranges
 
@@ -221,7 +216,7 @@ def main() -> None:
 
     cfg = load_yaml(args.config)
     base_cfg = load_config(str(cfg["base_xai_config"]))
-    output_dir = REPO_ROOT / str(cfg["output_dir"])
+    output_dir = Path(str(cfg["output_dir"]))
     output_dir.mkdir(parents=True, exist_ok=True)
 
     datasets = get_dataset(base_cfg.dataset)
@@ -240,8 +235,12 @@ def main() -> None:
     n_perturbations = int(cfg["n_perturbations_per_sample"])
     seed = int(cfg["random_seed"])
 
-    sampled = sample_instances(X_test, y_test, preds_test, sample_groups, n_samples, seed)
-    logger.info("Sampled instances per group: %s", {k: len(v) for k, v in sampled.items()})
+    sampled = sample_instances(
+        X_test, y_test, preds_test, sample_groups, n_samples, seed
+    )
+    logger.info(
+        "Sampled instances per group: %s", {k: len(v) for k, v in sampled.items()}
+    )
 
     perturb_spec = resolve_perturbation_spec(cfg)
     logger.info(
@@ -289,9 +288,11 @@ def main() -> None:
         perturbed = perturbation_obj.perturb(group_df)
 
         for instance_id, pert_rows in perturbed.groupby(level=0, sort=False):
-            base_row = group_df.loc[instance_id] # type: ignore
+            base_row = group_df.loc[instance_id]  # type: ignore
             base_pred = int(
-                np.asarray(fraud_model.predict(group_df.loc[[instance_id]])).flatten()[0]
+                np.asarray(fraud_model.predict(group_df.loc[[instance_id]])).flatten()[
+                    0
+                ]
             )
 
             valid_random_pool = all_test_indices[all_test_indices != instance_id]
@@ -306,14 +307,24 @@ def main() -> None:
                 rand_row = X_test.loc[rand_id]
 
                 dist_pert = gower_row_distance(
-                    base_row, pert_row, mutable_numeric_cols, mutable_categorical_cols, ranges
+                    base_row,
+                    pert_row,
+                    mutable_numeric_cols,
+                    mutable_categorical_cols,
+                    ranges,
                 )
                 dist_rand = gower_row_distance(
-                    base_row, rand_row, mutable_numeric_cols, mutable_categorical_cols, ranges
+                    base_row,
+                    rand_row,
+                    mutable_numeric_cols,
+                    mutable_categorical_cols,
+                    ranges,
                 )
 
                 pert_pred = int(
-                    np.asarray(fraud_model.predict(pd.DataFrame([pert_row]))).flatten()[0]
+                    np.asarray(fraud_model.predict(pd.DataFrame([pert_row]))).flatten()[
+                        0
+                    ]
                 )
                 pred_flip = int(pert_pred != base_pred)
 

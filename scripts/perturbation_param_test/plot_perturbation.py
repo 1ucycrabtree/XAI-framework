@@ -8,8 +8,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-PAIRWISE_METRICS_PATH = Path(
-    "results/perturbation_calibration_design/pairwise_value_metrics.csv"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PAIRWISE_METRICS_PATH = (
+    REPO_ROOT
+    / "results"
+    / "perturbation_calibration_design"
+    / "pairwise_value_metrics.csv"
 )
 
 PERTURBATION_CODES = {
@@ -17,7 +21,14 @@ PERTURBATION_CODES = {
     "DirectionalDrift": "DD",
     "TopKFeatures": "TK",
 }
-MAX_VALID_TOPK = 8  # Only 6 features are perturbable
+MAX_VALID_TOPK = 6  # Only 6 features are perturbable
+
+
+def resolve_repo_path(raw_path: str) -> Path:
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    return path
 
 
 def _format_params(perturbation: str, params_json: str) -> str:
@@ -112,7 +123,6 @@ def _plot_topk_grouped(
     )
     order = order_df["topk_setting"].tolist()
 
-    # Tick labels emphasize K (and lambda only when needed).
     lam_count = int(order_df["lambda"].nunique())
     if lam_count > 1:
         tick_labels = [
@@ -132,10 +142,10 @@ def _plot_topk_grouped(
     )
     ax.set_yscale("log")
     ax.set_title(
-        f"Parameter Calibration Experiment: {PERTURBATION_CODES.get(perturbation_name, perturbation_name)}"
+        f"Parameter Calibration Experiment: {PERTURBATION_CODES.get(perturbation_name, perturbation_name)}"  # noqa: E501
     )
     ax.set_xlabel("Top-K setting")
-    ax.set_ylabel(f"Gower Distance (log scale)")
+    ax.set_ylabel("Gower Distance (log scale)")
 
     # Apply compact K labels.
     ax.set_xticklabels(tick_labels, rotation=0)
@@ -143,7 +153,7 @@ def _plot_topk_grouped(
     plt.tight_layout()
     plt.savefig(
         output_dir
-        / f"gower_distance_{PERTURBATION_CODES.get(perturbation_name, perturbation_name)}.png",
+        / f"gower_distance_{PERTURBATION_CODES.get(perturbation_name, perturbation_name)}.png",  # noqa: E501
         dpi=300,
     )
     plt.close()
@@ -180,8 +190,8 @@ def main() -> None:
     args = parse_args()
     sns.set_theme(style="whitegrid")
 
-    input_path = Path(args.input)
-    output_dir = Path(args.output_dir)
+    input_path = resolve_repo_path(args.input)
+    output_dir = resolve_repo_path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if not input_path.exists():
@@ -201,8 +211,7 @@ def main() -> None:
                 "(changed_feature_count == 0)."
             )
 
-    # Log scales cannot represent zero; keep raw values for summaries and
-    # create a plotting-safe column.
+    # Log scales cannot represent zero
     df["gower_is_zero"] = (
         pd.to_numeric(df["gower_distance"], errors="coerce") <= 0
     ).astype(int)
@@ -232,7 +241,7 @@ def main() -> None:
     )
     zero_summary.to_csv(output_dir / "gower_zero_summary.csv", index=False)
 
-    # 1) Overview: every trial in one plot (grouped by perturbation family).
+    # Every trial in one plot
     df_overview = df.copy()
     overview_order = _trial_order_grouped_by_perturbation(df_overview)
     plt.figure(figsize=(16, 7))
@@ -247,13 +256,13 @@ def main() -> None:
     ax.set_yscale("log")
     ax.set_title("Parameter Calibration Experiment: Gower Distance by Setting")
     ax.set_xlabel("Perturbation Code | Parameter Setting")
-    ax.set_ylabel(f"Gower Distance (log scale)")
+    ax.set_ylabel("Gower Distance (log scale)")
     ax.tick_params(axis="x", rotation=35)
     plt.tight_layout()
     plt.savefig(output_dir / "gower_distance_overview.png", dpi=300)
     plt.close()
 
-    # 2) One figure per perturbation family
+    # Figures for each perturbation family separately (GN, DD, TK).
     for perturbation_name in sorted(df["perturbation"].unique()):
         subset = df[df["perturbation"] == perturbation_name].copy()
         if subset.empty:
@@ -276,10 +285,10 @@ def main() -> None:
         )
         ax.set_yscale("log")
         ax.set_title(
-            f"Parameter Calibration Experiment: {PERTURBATION_CODES.get(perturbation_name, perturbation_name)}"
+            f"Parameter Calibration Experiment: {PERTURBATION_CODES.get(perturbation_name, perturbation_name)}"  # noqa: E501
         )
         ax.set_xlabel("Parameter Setting")
-        ax.set_ylabel(f"Gower Distance (log scale s)")
+        ax.set_ylabel("Gower Distance (log scale s)")
         ax.tick_params(axis="x", rotation=0)
         plt.tight_layout()
         perturb_code = PERTURBATION_CODES.get(perturbation_name, perturbation_name)

@@ -1,10 +1,10 @@
+import argparse
 import logging
 from pathlib import Path
 
 # from catboost import CatBoostClassifier
-
-from generate_metadata import MetadataGenerator
 from apply_preprocessing import DataPreprocessor
+from generate_metadata import MetadataGenerator
 from train_catboost import CatBoostTrainer
 
 logging.basicConfig(
@@ -12,7 +12,19 @@ logging.basicConfig(
 )
 
 
-def run_experiment_pipeline():
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Run preprocessing + CatBoost training pipeline"
+    )
+    parser.add_argument(
+        "--tune",
+        action="store_true",
+        help="Enable hyperparameter grid tuning. If omitted, uses lr=0.01 depth=10.",
+    )
+    return parser.parse_args()
+
+
+def run_experiment_pipeline(tune: bool = False):
     PROJECT_ROOT = Path(__file__).resolve().parents[2]
     RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
     METADATA_DIR = Path(__file__).resolve().parent / "metadata"
@@ -40,6 +52,7 @@ def run_experiment_pipeline():
         train_val_path=PROCESSED_DIR / "train_val_final.parquet",
         test_path=PROCESSED_DIR / "test_final.parquet",
         metadata_path=PROCESSED_DIR / "processed_metadata.json",
+        tune=tune,
     )
 
     trainer.train(MODELS_DIR)
@@ -51,9 +64,11 @@ def run_experiment_pipeline():
     trainer.evaluate()
 
     logging.info(
-        "Model training and evaluation complete. All outputs saved to data/processed and data/models."
+        "Model training and evaluation complete. "
+        "All outputs saved to data/processed and data/models."
     )
 
 
 if __name__ == "__main__":
-    run_experiment_pipeline()
+    args = parse_args()
+    run_experiment_pipeline(tune=args.tune)

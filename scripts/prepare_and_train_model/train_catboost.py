@@ -1,6 +1,7 @@
-from datetime import datetime
+import argparse
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -21,12 +22,57 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Train and evaluate CatBoost model on processed datasets"
+    )
+    parser.add_argument(
+        "--train-val-path",
+        type=str,
+        default=str(REPO_ROOT / "data" / "processed" / "train_val_final.parquet"),
+        help="Path to train+validation parquet file",
+    )
+    parser.add_argument(
+        "--test-path",
+        type=str,
+        default=str(REPO_ROOT / "data" / "processed" / "test_final.parquet"),
+        help="Path to test parquet file",
+    )
+    parser.add_argument(
+        "--metadata-path",
+        type=str,
+        default=str(REPO_ROOT / "data" / "processed" / "processed_metadata.json"),
+        help="Path to processed metadata JSON",
+    )
+    parser.add_argument(
+        "--models-dir",
+        type=str,
+        default=str(REPO_ROOT / "data" / "models"),
+        help="Directory where trained model artifact is saved",
+    )
+    parser.add_argument(
+        "--tune",
+        action="store_true",
+        help="Enable LR/depth grid search; if omitted, use lr=0.01 and depth=10",
+    )
+    return parser.parse_args()
+
 
 class CatBoostTrainer:
-    def __init__(self, train_val_path: Path, test_path: Path, metadata_path: Path):
+    def __init__(
+        self,
+        train_val_path: Path,
+        test_path: Path,
+        metadata_path: Path,
+        tune: bool = False,
+    ):
         self._load_files(train_val_path, test_path, metadata_path)
-        self.output_dir = Path("data") / "models" / "evaluation_outputs"
+        self.output_dir = REPO_ROOT / "data" / "models" / "evaluation_outputs"
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.tune = tune
 
         self.target = "isFraud"
         self.id_cols = self.metadata.get("id_cols", ["TransactionID"])
@@ -42,6 +88,47 @@ class CatBoostTrainer:
         self.tuning_results: list[dict] = []
 
         self._prepare_datasets()
+
+    def _train_single_model(
+        self, learning_rate: float = 0.01, depth: int = 10
+    ) -> tuple[CatBoostClassifier, dict]:
+        logging.info(
+            "Training single CatBoost model with fixed params: "
+            "learning_rate=%s, depth=%s",
+            learning_rate,
+            depth,
+        )
+        model = self._build_model(learning_rate=learning_rate, depth=depth)
+        model.fit(
+            self.X_train,
+            self.y_train,
+            eval_set=(self.X_val, self.y_val),
+            cat_features=self.cat_feature_indices,
+            early_stopping_rounds=100,
+            plot=False,
+        )
+
+        val_probs = model.predict_proba(self.X_val)[:, 1]
+        best_threshold, best_f2, _, _ = self._best_f2_threshold(self.y_val, val_probs)
+        result = {
+            "learning_rate": learning_rate,
+            "depth": depth,
+            "best_iteration": int(model.get_best_iteration()),
+            "validation_AUROC": float(roc_auc_score(self.y_val, val_probs)),
+            "validation_AUPRC": float(average_precision_score(self.y_val, val_probs)),
+            "validation_best_F2": float(best_f2),
+            "validation_best_threshold": float(best_threshold),
+        }
+
+        self.tuning_results = [result]
+        self.selected_hyperparameters = {
+            "learning_rate": learning_rate,
+            "depth": depth,
+            "early_stopping_rounds": 100,
+            "auto_class_weights": "SqrtBalanced",
+            "selection_metric": "Fixed hyperparameters (no tuning)",
+        }
+        return model, result
 
     def _build_model(self, learning_rate: float, depth: int) -> CatBoostClassifier:
         return CatBoostClassifier(
@@ -156,18 +243,29 @@ class CatBoostTrainer:
         return best_model, best_result
 
     def train(self, output_path: Path) -> None:
-        logging.info("Initialising and tuning CatBoostClassifier...")
-        model, best_result = self._run_hyperparameter_tuning()
+        if self.tune:
+            logging.info("Initialising and tuning CatBoostClassifier...")
+            model, best_result = self._run_hyperparameter_tuning()
+        else:
+            logging.info(
+                "Initialising CatBoostClassifier without hyperparameter tuning..."
+            )
+            model, best_result = self._train_single_model(
+                learning_rate=0.01, depth=10
+            )
 
         time = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_path.mkdir(parents=True, exist_ok=True)
         model_path = (
             output_path
-            / f"catboost_fraud_model_lr{best_result['learning_rate']}_depth{best_result['depth']}_{time}.cbm"
+            / (
+                f"catboost_fraud_model_lr{best_result['learning_rate']}"
+                f"_depth{best_result['depth']}_{time}.cbm"
+            )
         )
 
         logging.info(
-            "Saving tuned model to %s (best iteration: %s)",
+            "Saving model to %s (best iteration: %s)",
             model_path,
             model.get_best_iteration(),
         )
@@ -324,7 +422,8 @@ class CatBoostTrainer:
         )
         if missing_cat:
             logging.warning(
-                "Some metadata categorical columns are absent after preprocessing and were skipped: %s",
+                "Some metadata categorical columns are absent after "
+                "preprocessing and were skipped: %s",
                 sorted(missing_cat),
             )
 
@@ -499,3 +598,19 @@ class CatBoostTrainer:
             for feat in features_to_drop:
                 f.write(f"- {feat}\n")
         logging.info("Saved low-importance features list to %s", drop_path)
+
+
+def main() -> None:
+    args = parse_args()
+    trainer = CatBoostTrainer(
+        train_val_path=Path(args.train_val_path),
+        test_path=Path(args.test_path),
+        metadata_path=Path(args.metadata_path),
+        tune=args.tune,
+    )
+    trainer.train(Path(args.models_dir))
+    trainer.evaluate()
+
+
+if __name__ == "__main__":
+    main()
