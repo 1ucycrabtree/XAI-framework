@@ -283,3 +283,6 @@ experiment:
 ```bash
 python -m xai_framework --config TabularLIME.yaml
 ```
+## License
+
+Apache License 2.0. See `LICENSE`.
