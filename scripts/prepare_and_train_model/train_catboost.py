@@ -250,18 +250,12 @@ class CatBoostTrainer:
             logging.info(
                 "Initialising CatBoostClassifier without hyperparameter tuning..."
             )
-            model, best_result = self._train_single_model(
-                learning_rate=0.01, depth=10
-            )
+            model, best_result = self._train_single_model(learning_rate=0.01, depth=10)
 
-        time = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         output_path.mkdir(parents=True, exist_ok=True)
-        model_path = (
-            output_path
-            / (
-                f"catboost_fraud_model_lr{best_result['learning_rate']}"
-                f"_depth{best_result['depth']}_{time}.cbm"
-            )
+        model_path = output_path / (
+            f"catboost_fraud_model_lr{best_result['learning_rate']}"
+            f"_depth{best_result['depth']}.cbm"
         )
 
         logging.info(

@@ -11,6 +11,23 @@ conda activate xai_env
 python -m xai_framework --config default.yaml
 ```
 
+For IEEE-CIS tuning/setup. Need to add dataset in data/raw. And then run the train script (no --tune to skip tuning). 
+
+## Unified Workflow Commands
+
+Use one entry point for experiment setup tasks:
+
+```bash
+# 1) Full preprocessing + model training
+python scripts/run_workflows.py train --tune
+
+# 2) Perturbation calibration + locality validation (sequential)
+python scripts/run_workflows.py perturbation
+
+# 3) Run explanation method parameter validation experiments
+python scripts/run_workflows.py experiments --configs KernelSHAP_param_test.yaml TabularLIME_param_test.yaml
+```
+
 ## Project Structure
 
 ```
@@ -19,7 +36,10 @@ xai-framework/
 │   └── default.yaml          # Experiment variables (model, explanation method, perturbation rules)
 │   └── baseline_LIME.yaml    # Baseline experiment with TabularLIME
 │   └── baseline_SHAP.yaml    # Baseline experiment with KernelSHAP
-├── data/                     # Mount your dataset and model here
+├── data/
+│   └── raw/                     # Mount your raw data if need to preprocess here
+│   └── processed/                     # Mount your processed dataset here
+│   └── models/                     # Mount your model here
 ├── results/                  # Outputs and checkpoints written here
 ├── xai_framework/
 │   ├── dataset/              # Data loading (extensible)

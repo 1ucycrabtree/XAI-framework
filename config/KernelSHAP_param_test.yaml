@@ -47,7 +47,7 @@ dataset:
 
 model:
   architecture: CatBoost
-  file_path: "data/models/catboost_fraud_model_lr0.01_depth10_2026-03-20_192829.cbm"
+  file_path: "data/models/catboost_fraud_model_lr0.01_depth10.cbm"
   metadata:
     name: "CatBoost Fraud Model"
     decision_threshold: 0.2543702382820814
