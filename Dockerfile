@@ -1,9 +1,9 @@
 FROM continuumio/miniconda3:latest
 
-WORKDIR /app
+WORKDIR /framework
 
 ENV MPLBACKEND=Agg
-ENV PYTHONPATH=/app/xai_framework
+ENV PYTHONPATH=/framework:/framework/xai_framework
 
 COPY environment.yml .
 
@@ -15,6 +15,7 @@ RUN conda env create -f environment.yml && \
 SHELL ["conda", "run", "-n", "xai_env", "/bin/bash", "-c"]
 
 COPY xai_framework/ ./xai_framework/
+COPY scripts/ ./scripts/
 COPY config/ ./config/
 
 CMD ["conda", "run", "--no-capture-output", "-n", "xai_env", "tail", "-f", "/dev/null"]
