@@ -350,11 +350,18 @@ class CatBoostTrainer:
         logging.info("Loaded files.")
 
     def _memory_optimisation(self) -> None:
-        for cat_feat in self._resolved_categorical_cols():
+        resolved_cats = self._resolved_categorical_cols()
+        resolved_cats_set = set(resolved_cats)
+
+        for cat_feat in resolved_cats:
             if cat_feat in self.train_val_df.columns:
-                self.train_val_df[cat_feat] = self.train_val_df[cat_feat].astype(str)
+                self.train_val_df[cat_feat] = (
+                    self.train_val_df[cat_feat].fillna("missing").astype(str)
+                )
             if cat_feat in self.test_df.columns:
-                self.test_df[cat_feat] = self.test_df[cat_feat].astype(str)
+                self.test_df[cat_feat] = (
+                    self.test_df[cat_feat].fillna("missing").astype(str)
+                )
 
         numeric_candidates = self.metadata.get("numerical_cols")
         if numeric_candidates is None:
@@ -366,6 +373,8 @@ class CatBoostTrainer:
             ]
 
         for col in numeric_candidates:
+            if col in resolved_cats_set:
+                continue
             if col in self.train_val_df.columns:
                 self.train_val_df[col] = pd.to_numeric(
                     self.train_val_df[col], downcast="float"

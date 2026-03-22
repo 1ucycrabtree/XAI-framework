@@ -27,6 +27,8 @@ def _train(args: argparse.Namespace) -> None:
     cmd = [sys.executable, str(script)]
     if args.tune:
         cmd.append("--tune")
+    if args.skip_preprocessing:
+        cmd.append("--skip-preprocessing")
     _run(cmd)
 
 
@@ -60,6 +62,14 @@ def parse_args() -> argparse.Namespace:
         "--tune",
         action="store_true",
         help="Enable CatBoost grid tuning. If omitted, uses lr=0.01 depth=10.",
+    )
+    train_parser.add_argument(
+        "--skip-preprocessing",
+        action="store_true",
+        help=(
+            "Skip metadata generation and preprocessing, and train directly "
+            "from data/processed files"
+        ),
     )
     train_parser.set_defaults(func=_train)
 

@@ -21,31 +21,59 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Enable hyperparameter grid tuning. If omitted, uses lr=0.01 depth=10.",
     )
+    parser.add_argument(
+        "--skip-preprocessing",
+        action="store_true",
+        help=(
+            "Skip metadata generation and preprocessing, and train directly from "
+            "data/processed train_val/test parquet + processed_metadata.json"
+        ),
+    )
     return parser.parse_args()
 
 
-def run_experiment_pipeline(tune: bool = False):
+def run_experiment_pipeline(tune: bool = False, skip_preprocessing: bool = False):
     PROJECT_ROOT = Path(__file__).resolve().parents[2]
     RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
     METADATA_DIR = Path(__file__).resolve().parent / "metadata"
     PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
     MODELS_DIR = PROJECT_ROOT / "data" / "models"
 
-    logging.info(
-        "Step 1: Identifying data quality issues and generating cleaning rules..."
-    )
-    gen = MetadataGenerator()
-    gen.run(RAW_DATA_DIR, METADATA_DIR)
+    required_processed = [
+        PROCESSED_DIR / "train_val_final.parquet",
+        PROCESSED_DIR / "test_final.parquet",
+        PROCESSED_DIR / "processed_metadata.json",
+    ]
 
-    metadata_files = sorted(METADATA_DIR.glob("metadata_*.json"))
-    if not metadata_files:
-        raise FileNotFoundError("Metadata generation failed to produce a JSON file.")
-    latest_metadata = metadata_files[-1]
-    logging.info(f"Using latest metadata: {latest_metadata.name}")
+    if skip_preprocessing:
+        missing = [str(p) for p in required_processed if not p.exists()]
+        if missing:
+            raise FileNotFoundError(
+                "--skip-preprocessing was set but processed inputs are missing: "
+                + ", ".join(missing)
+            )
+        logging.info(
+            "Skipping metadata generation and preprocessing. "
+            "Using existing files under data/processed/."
+        )
+    else:
+        logging.info(
+            "Step 1: Identifying data quality issues and generating cleaning rules..."
+        )
+        gen = MetadataGenerator()
+        gen.run(RAW_DATA_DIR, METADATA_DIR)
 
-    logging.info("Step 2: Applying preprocessing rules and preparing datasets...")
-    preprocessor = DataPreprocessor(str(latest_metadata))
-    preprocessor.process(RAW_DATA_DIR, PROCESSED_DIR)
+        metadata_files = sorted(METADATA_DIR.glob("metadata_*.json"))
+        if not metadata_files:
+            raise FileNotFoundError(
+                "Metadata generation failed to produce a JSON file."
+            )
+        latest_metadata = metadata_files[-1]
+        logging.info(f"Using latest metadata: {latest_metadata.name}")
+
+        logging.info("Step 2: Applying preprocessing rules and preparing datasets...")
+        preprocessor = DataPreprocessor(str(latest_metadata))
+        preprocessor.process(RAW_DATA_DIR, PROCESSED_DIR)
 
     logging.info("Step 3: Training and evaluating the CatBoost model...")
     trainer = CatBoostTrainer(
@@ -71,4 +99,7 @@ def run_experiment_pipeline(tune: bool = False):
 
 if __name__ == "__main__":
     args = parse_args()
-    run_experiment_pipeline(tune=args.tune)
+    run_experiment_pipeline(
+        tune=args.tune,
+        skip_preprocessing=args.skip_preprocessing,
+    )
