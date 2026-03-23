@@ -26,8 +26,8 @@ python scripts/run_workflows.py train --tune
 # 2) Perturbation calibration + locality validation
 python scripts/run_workflows.py perturbation
 
-# 3) Plot experiment results
-python scripts/run_workflows.py plot_results --results-root results --methods TabularLIME KernelSHAP
+# 3) Plot experiment results for TabularLIME and KernelSHAP
+python scripts/run_workflows.py plot_results
 ```
 
 ## Parallel Launcher
