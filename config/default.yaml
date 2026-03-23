@@ -57,6 +57,7 @@ model:
   file_path: "data/models/catboost_fraud_model_lr0.01_depth10.cbm"
   metadata:
     name: "CatBoost Fraud Model"
+    decision_threshold: 0.218262061153823
 
 
 explainer:
