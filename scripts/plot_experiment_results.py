@@ -5,9 +5,9 @@ import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
 import pandas as pd
 import seaborn as sns
+from matplotlib.patches import Patch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -258,18 +258,15 @@ def load_retention_from_prediction_flips(prediction_flips_dir: Path) -> pd.DataF
             if n_pert >= 2:
                 return df
 
-    # Fallback: merge per-perturbation files if the "all" file is stale/incomplete.
     parts: list[pd.DataFrame] = []
     for p in sorted(prediction_flips_dir.glob("changed_instances_*.csv")):
         name = p.stem
-        # Skip aggregate and by-group files
         if name in {
             "changed_instances_all",
             "changed_instances_TP",
             "changed_instances_FP",
         }:
             continue
-        # Skip combined perturbation-group files (e.g. changed_instances_K_TP)
         suffix = name.replace("changed_instances_", "")
         if suffix.endswith("_TP") or suffix.endswith("_FP"):
             continue
@@ -749,8 +746,9 @@ def plot_topk_feature_frequency(
         return
 
     df["unique_instances_selected"] = pd.to_numeric(
-        df.get("unique_instances_selected"), errors="coerce"
-    )  # type: ignore
+        df.get("unique_instances_selected"),  # type: ignore
+        errors="coerce",
+    )
     if (
         "unique_instances_selected" in df.columns
         and not df["unique_instances_selected"].isna().all()
@@ -770,7 +768,8 @@ def plot_topk_feature_frequency(
     ].copy()
     if not all_rows.empty:
         all_rows["unique_instances_selected"] = pd.to_numeric(
-            all_rows.get("unique_instances_selected"), errors="coerce"
+            all_rows.get("unique_instances_selected"),  # type: ignore
+            errors="coerce",
         )
         if (
             "unique_instances_selected" in all_rows.columns
@@ -794,7 +793,7 @@ def plot_topk_feature_frequency(
         top_features = (
             df.groupby("feature", as_index=False)["pct_of_500"]
             .mean()
-            .sort_values("pct_of_500", ascending=False)
+            .sort_values("pct_of_500", ascending=False)  # type: ignore
             .head(top_n)["feature"]
             .tolist()
         )
@@ -824,7 +823,7 @@ def plot_topk_feature_frequency(
     ax.tick_params(axis="x", rotation=25)
     ax.legend(title="sample_group", loc="upper right")
     for container in ax.containers:
-        ax.bar_label(container, fmt="%.1f%%", padding=2, fontsize=6)
+        ax.bar_label(container, fmt="%.1f%%", padding=2, fontsize=6)  # pyright: ignore[reportArgumentType]
     plt.tight_layout()
     plt.savefig(out_dir / f"{method}_topk_feature_frequency_grouped_bar.png", dpi=300)
     plt.close()
@@ -922,7 +921,7 @@ def plot_topk_feature_frequency(
     ax.tick_params(axis="x", rotation=25)
     ax.legend(title="sample_group", loc="upper left")
     for container in ax.containers:
-        ax.bar_label(container, fmt="%.1f%%", padding=2, fontsize=6)
+        ax.bar_label(container, fmt="%.1f%%", padding=2, fontsize=6)  # pyright: ignore[reportArgumentType]
     plt.tight_layout()
     plt.savefig(
         out_dir / f"{method}_topk_feature_flip_conditioned_frequency_grouped_bar.png",

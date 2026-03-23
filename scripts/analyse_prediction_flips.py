@@ -107,7 +107,6 @@ def analyse_file(result_file: Path, metric_name: str) -> tuple[list[dict], dict]
             continue
         preserved_counts[str(instance_id)] += 1
 
-    # Best source for total perturbations per instance (all rows): perturbation logs when present.
     log_items = metrics.get("PerturbationLog_with_ids", [])
     total_counts: Counter = Counter()
     if isinstance(log_items, list) and log_items:
@@ -124,7 +123,6 @@ def analyse_file(result_file: Path, metric_name: str) -> tuple[list[dict], dict]
         # Use modal total count per instance from logs
         expected_per_instance = Counter(total_counts.values()).most_common(1)[0][0]
     elif preserved_counts:
-        # Fallback: infer from preserved rows only (cannot detect fully-flipped missing IDs)
         expected_per_instance = max(preserved_counts.values())
         for iid in preserved_counts:
             total_counts[iid] = expected_per_instance
@@ -188,7 +186,6 @@ def main() -> None:
         all_rows.extend(rows)
         all_summary_rows.append(summary)
 
-    # Split changed-instance outputs by sample group and perturbation.
     by_group: dict[str, list[dict]] = defaultdict(list)
     by_perturbation: dict[str, list[dict]] = defaultdict(list)
     by_perturbation_group: dict[tuple[str, str], list[dict]] = defaultdict(list)

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections import Counter, defaultdict
-from pathlib import Path
 import logging
+from collections import Counter
+from pathlib import Path
 
 import pandas as pd
 
@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help=(
             "Deduplicate likely duplicated Top-K log rows per file/instance. "
-            "Applies exact-row dedupe then caps rows per instance to the modal count per file."
+            "Applies exact-row dedupe then caps rows per instance to the modal count per file."  # noqa: E501
         ),
     )
     return parser.parse_args()
@@ -202,7 +202,6 @@ def build_per_instance_feature_list(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
 
-    # Per file/group/instance to keep run-level provenance.
     out_rows: list[dict] = []
     grouped = df.groupby(
         ["result_file", "sample_group", "run_dir", "instance_id"], dropna=False
@@ -317,7 +316,6 @@ def dedupe_logs(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         counts = sub.groupby("instance_id", dropna=False).size()
         if counts.empty:
             continue
-        # Expected perturbation rows per instance are stable in one file; mode is robust.
         target = int(counts.mode().iloc[0])
 
         keep_frames: list[pd.DataFrame] = []
