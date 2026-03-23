@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import pandas as pd
 import seaborn as sns
 
@@ -46,6 +47,24 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help="Output directory for plots/CSVs (default: <results-dir>/plots).",
+    )
+    parser.add_argument(
+        "--prediction-flips-dir",
+        type=str,
+        default=None,
+        help=(
+            "Directory containing prediction flip CSVs from analyse_prediction_flips.py "
+            "(default: <results-dir>/prediction_flip_analysis)."
+        ),
+    )
+    parser.add_argument(
+        "--topk-analysis-dir",
+        type=str,
+        default=None,
+        help=(
+            "Directory containing Top-K analysis CSVs from "
+            "analyse_topk_perturbation_logs.py (default: <results-dir>/topk_analysis)."
+        ),
     )
     return parser.parse_args()
 
@@ -218,12 +237,82 @@ def build_dataframes(
     return local_dist_df, local_summary_df, global_df
 
 
+def load_retention_from_prediction_flips(prediction_flips_dir: Path) -> pd.DataFrame:
+    required_cols = {"sample_group", "perturbation", "instance_id", "changed_rate"}
+
+    def _postprocess(_df: pd.DataFrame) -> pd.DataFrame:
+        out = _df.copy()
+        out["perturbation"] = out["perturbation"].apply(
+            lambda x: normalise_perturbation(str(x)) if pd.notna(x) else x
+        )
+        out["changed_rate"] = pd.to_numeric(out["changed_rate"], errors="coerce")
+        out["retention_rate"] = 1.0 - out["changed_rate"]
+        return out
+
+    csv_path = prediction_flips_dir / "changed_instances_all.csv"
+    if csv_path.exists():
+        df = pd.read_csv(csv_path)
+        if required_cols.issubset(set(df.columns)):
+            df = _postprocess(df)
+            n_pert = df["perturbation"].dropna().nunique()
+            if n_pert >= 2:
+                return df
+
+    # Fallback: merge per-perturbation files if the "all" file is stale/incomplete.
+    parts: list[pd.DataFrame] = []
+    for p in sorted(prediction_flips_dir.glob("changed_instances_*.csv")):
+        name = p.stem
+        # Skip aggregate and by-group files
+        if name in {
+            "changed_instances_all",
+            "changed_instances_TP",
+            "changed_instances_FP",
+        }:
+            continue
+        # Skip combined perturbation-group files (e.g. changed_instances_K_TP)
+        suffix = name.replace("changed_instances_", "")
+        if suffix.endswith("_TP") or suffix.endswith("_FP"):
+            continue
+        df_part = pd.read_csv(p)
+        if required_cols.issubset(set(df_part.columns)):
+            parts.append(df_part)
+
+    if not parts:
+        return pd.DataFrame()
+
+    df = pd.concat(parts, ignore_index=True)
+    return _postprocess(df)
+
+
+def load_topk_feature_frequency(topk_analysis_dir: Path) -> pd.DataFrame:
+    csv_path = topk_analysis_dir / "topk_feature_frequency.csv"
+    if not csv_path.exists():
+        return pd.DataFrame()
+    df = pd.read_csv(csv_path)
+    required = {"sample_group", "feature", "instance_frequency"}
+    if not required.issubset(set(df.columns)):
+        return pd.DataFrame()
+    return df
+
+
+def load_topk_unique_instances(topk_analysis_dir: Path) -> pd.DataFrame:
+    csv_path = topk_analysis_dir / "topk_unique_instances_by_sample_group.csv"
+    if not csv_path.exists():
+        return pd.DataFrame()
+    df = pd.read_csv(csv_path)
+    required = {"sample_group", "instance_id", "selected_features"}
+    if not required.issubset(set(df.columns)):
+        return pd.DataFrame()
+    return df
+
+
 def _cat_order_if_present(
     df: pd.DataFrame, col: str, desired: list[str]
 ) -> list[str] | None:
     if col not in df.columns:
         return None
     present_values = [v for v in df[col].dropna().unique().tolist() if v is not None]
+    present_values = [str(v).capitalize() for v in present_values]
     if not present_values:
         return None
     ordered_desired = [v for v in desired if v in set(present_values)]
@@ -558,6 +647,290 @@ def plot_faithfulness_summary(
     plt.close(g.figure)
 
 
+def plot_retention_rate_summary(
+    method: str,
+    retention_instance_df: pd.DataFrame,
+    out_dir: Path,
+) -> None:
+    if retention_instance_df.empty:
+        return
+
+    df = retention_instance_df.copy()
+    df["retention_rate"] = pd.to_numeric(df["retention_rate"], errors="coerce")
+    df = df.dropna(subset=["retention_rate"])
+    if df.empty:
+        return
+
+    pert_order = _cat_order_if_present(
+        df, "perturbation", list(PERTURBATION_NAME_MAP.values())
+    )
+    if not pert_order:
+        return
+
+    fig, axes = plt.subplots(
+        1, len(pert_order), figsize=(4.2 * len(pert_order), 5.0), sharey=False
+    )
+    if len(pert_order) == 1:
+        axes = [axes]
+    group_order = ["TP", "FP"]
+    group_palette = {"TP": "#f28e2b", "FP": "#4e79a7"}
+
+    for i, pert in enumerate(pert_order):
+        ax = axes[i]
+        sub = df[df["perturbation"] == pert].copy()
+        if sub.empty:
+            ax.set_title(pert)
+            ax.text(
+                0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes
+            )
+            ax.set_xlabel("sample_group")
+            if i == 0:
+                ax.set_ylabel("Retention rate (per instance)")
+            continue
+
+        present_groups = [
+            g
+            for g in group_order
+            if g in set(sub["sample_group"].dropna().unique().tolist())
+        ]
+        sns.boxplot(
+            data=sub,
+            x="sample_group",
+            y="retention_rate",
+            order=present_groups,
+            hue="sample_group",
+            showfliers=True,
+            width=0.55,
+            linewidth=1.0,
+            palette=group_palette,
+            legend=False,
+            flierprops={
+                "marker": "o",
+                "markersize": 3,
+                "markerfacecolor": "#333333",
+                "markeredgecolor": "#333333",
+                "alpha": 0.55,
+            },
+            ax=ax,
+        )
+        ax.set_title(pert)
+        ax.set_xlabel("sample_group")
+        if i == 0:
+            ax.set_ylabel("Retention rate (per instance)")
+        else:
+            ax.set_ylabel("")
+
+    legend_handles = [
+        Patch(facecolor=group_palette["TP"], edgecolor="black", label="TP"),
+        Patch(facecolor=group_palette["FP"], edgecolor="black", label="FP"),
+    ]
+    fig.legend(handles=legend_handles, title="sample_group", loc="upper right")
+
+    fig.suptitle(f"{method}: Per-Instance Retention Rate by Perturbation")
+    plt.tight_layout()
+    plt.savefig(out_dir / f"{method}_retention_rate_boxplot_minipanels.png", dpi=300)
+    plt.close()
+
+
+def plot_topk_feature_frequency(
+    method: str,
+    topk_feature_freq_df: pd.DataFrame,
+    topk_unique_instances_df: pd.DataFrame,
+    prediction_flips_dir: Path,
+    out_dir: Path,
+    top_n: int = 6,
+) -> None:
+    if topk_feature_freq_df.empty:
+        return
+
+    df = topk_feature_freq_df.copy()
+    df = df[df["sample_group"].isin(["TP", "FP"])].copy()
+    if df.empty:
+        return
+
+    df["unique_instances_selected"] = pd.to_numeric(
+        df.get("unique_instances_selected"), errors="coerce"
+    )  # type: ignore
+    if (
+        "unique_instances_selected" in df.columns
+        and not df["unique_instances_selected"].isna().all()
+    ):
+        df["pct_of_500"] = (df["unique_instances_selected"] / 500.0) * 100.0
+    else:
+        df["instance_frequency"] = pd.to_numeric(
+            df["instance_frequency"], errors="coerce"
+        )
+        df["pct_of_500"] = df["instance_frequency"] * 100.0
+    df = df.dropna(subset=["feature", "pct_of_500"])
+    if df.empty:
+        return
+
+    all_rows = topk_feature_freq_df[
+        topk_feature_freq_df["sample_group"] == "ALL"
+    ].copy()
+    if not all_rows.empty:
+        all_rows["unique_instances_selected"] = pd.to_numeric(
+            all_rows.get("unique_instances_selected"), errors="coerce"
+        )
+        if (
+            "unique_instances_selected" in all_rows.columns
+            and not all_rows["unique_instances_selected"].isna().all()
+        ):
+            all_rows["pct_of_500"] = (
+                all_rows["unique_instances_selected"] / 500.0
+            ) * 100.0
+        else:
+            all_rows["instance_frequency"] = pd.to_numeric(
+                all_rows["instance_frequency"], errors="coerce"
+            )
+            all_rows["pct_of_500"] = all_rows["instance_frequency"] * 100.0
+        all_rows = all_rows.dropna(subset=["feature", "pct_of_500"])
+        top_features = (
+            all_rows.sort_values("pct_of_500", ascending=False)
+            .head(top_n)["feature"]
+            .tolist()
+        )
+    else:
+        top_features = (
+            df.groupby("feature", as_index=False)["pct_of_500"]
+            .mean()
+            .sort_values("pct_of_500", ascending=False)
+            .head(top_n)["feature"]
+            .tolist()
+        )
+    if not top_features:
+        return
+
+    plot_df = df[df["feature"].isin(top_features)].copy()
+    plot_df["feature"] = pd.Categorical(
+        plot_df["feature"], categories=top_features, ordered=True
+    )
+    group_palette = {"TP": "#f28e2b", "FP": "#4e79a7"}
+
+    fig, ax = plt.subplots(figsize=(10.5, 5.5))
+    sns.barplot(
+        data=plot_df,
+        x="feature",
+        y="pct_of_500",
+        hue="sample_group",
+        hue_order=["TP", "FP"],
+        palette=group_palette,
+        ax=ax,
+    )
+    ax.set_xlabel("Feature")
+    ax.set_ylabel("% appearance out of all instances")
+    ax.set_ylim(0.0, min(100.0, max(5.0, plot_df["pct_of_500"].max() * 1.15)))
+    ax.set_title(f"{method}: Top-K Feature Frequency by Sample Group (% of instances)")
+    ax.tick_params(axis="x", rotation=25)
+    ax.legend(title="sample_group", loc="upper right")
+    for container in ax.containers:
+        ax.bar_label(container, fmt="%.1f%%", padding=2, fontsize=6)
+    plt.tight_layout()
+    plt.savefig(out_dir / f"{method}_topk_feature_frequency_grouped_bar.png", dpi=300)
+    plt.close()
+
+    if topk_unique_instances_df.empty:
+        return
+
+    flips_k_path = prediction_flips_dir / "changed_instances_K.csv"
+    if not flips_k_path.exists():
+        return
+    flips_df = pd.read_csv(flips_k_path)
+    needed = {
+        "sample_group",
+        "instance_id",
+        "changed_rows",
+        "total_perturbation_rows",
+    }
+    if not needed.issubset(set(flips_df.columns)):
+        return
+
+    sel = topk_unique_instances_df.copy()
+    sel = sel[sel["sample_group"].isin(["TP", "FP"])].copy()
+    if sel.empty:
+        return
+    sel["instance_id"] = sel["instance_id"].astype(str)
+    sel["selected_features"] = sel["selected_features"].fillna("").astype(str)
+    sel["feature"] = sel["selected_features"].str.split(",")
+    sel = sel.explode("feature")
+    sel["feature"] = sel["feature"].astype(str).str.strip()
+    sel = sel[(sel["feature"] != "") & (sel["feature"].isin(top_features))].copy()
+    if sel.empty:
+        return
+
+    flips_df = flips_df.copy()
+    flips_df = flips_df[flips_df["sample_group"].isin(["TP", "FP"])].copy()
+    flips_df["instance_id"] = flips_df["instance_id"].astype(str)
+    flips_df["changed_rows"] = pd.to_numeric(flips_df["changed_rows"], errors="coerce")
+    flips_df["total_perturbation_rows"] = pd.to_numeric(
+        flips_df["total_perturbation_rows"], errors="coerce"
+    )
+    flips_df = flips_df.dropna(subset=["changed_rows", "total_perturbation_rows"])
+    if flips_df.empty:
+        return
+
+    merged = sel.merge(
+        flips_df[
+            ["sample_group", "instance_id", "changed_rows", "total_perturbation_rows"]
+        ],
+        on=["sample_group", "instance_id"],
+        how="left",
+    )
+    merged["changed_rows"] = merged["changed_rows"].fillna(0.0)
+    merged["total_perturbation_rows"] = merged["total_perturbation_rows"].fillna(0.0)
+
+    agg = (
+        merged.groupby(["sample_group", "feature"], as_index=False)[
+            ["changed_rows", "total_perturbation_rows"]
+        ]
+        .sum()
+        .copy()
+    )
+    agg["flip_conditioned_frequency"] = agg.apply(
+        lambda r: (
+            float(r["changed_rows"]) / float(r["total_perturbation_rows"])
+            if float(r["total_perturbation_rows"]) > 0
+            else 0.0
+        ),
+        axis=1,
+    )
+    agg["flip_conditioned_pct"] = agg["flip_conditioned_frequency"] * 100.0
+    agg = agg[agg["feature"].isin(top_features)].copy()
+    if agg.empty:
+        return
+    agg["feature"] = pd.Categorical(
+        agg["feature"], categories=top_features, ordered=True
+    )
+
+    fig, ax = plt.subplots(figsize=(10.5, 5.5))
+    sns.barplot(
+        data=agg,
+        x="feature",
+        y="flip_conditioned_pct",
+        hue="sample_group",
+        hue_order=["TP", "FP"],
+        palette=group_palette,
+        ax=ax,
+    )
+    ax.set_xlabel("Feature")
+    ax.set_ylabel("% of flip-causing perturbations")
+    ax.set_ylim(
+        0.0,
+        min(100.0, max(5.0, agg["flip_conditioned_pct"].max() * 1.15)),
+    )
+    ax.set_title(f"{method}: Top-K Flip-Conditioned Feature Frequency")
+    ax.tick_params(axis="x", rotation=25)
+    ax.legend(title="sample_group", loc="upper left")
+    for container in ax.containers:
+        ax.bar_label(container, fmt="%.1f%%", padding=2, fontsize=6)
+    plt.tight_layout()
+    plt.savefig(
+        out_dir / f"{method}_topk_feature_flip_conditioned_frequency_grouped_bar.png",
+        dpi=300,
+    )
+    plt.close()
+
+
 def main() -> None:
     args = parse_args()
     sns.set_style("whitegrid")
@@ -568,6 +941,16 @@ def main() -> None:
     else:
         out_dir = resolve_repo_path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    prediction_flips_dir = (
+        resolve_repo_path(args.prediction_flips_dir)
+        if args.prediction_flips_dir
+        else results_dir / "prediction_flip_analysis"
+    )
+    topk_analysis_dir = (
+        resolve_repo_path(args.topk_analysis_dir)
+        if args.topk_analysis_dir
+        else results_dir / "topk_analysis"
+    )
 
     if not results_dir.exists():
         raise FileNotFoundError(f"Missing results directory: {results_dir}")
@@ -577,14 +960,25 @@ def main() -> None:
         raise ValueError(f"No *_result.json files found under: {results_dir}")
 
     local_dist_df, local_summary_df, global_df = build_dataframes(result_files)
+    retention_instance_df = load_retention_from_prediction_flips(prediction_flips_dir)
+    topk_feature_freq_df = load_topk_feature_frequency(topk_analysis_dir)
+    topk_unique_instances_df = load_topk_unique_instances(topk_analysis_dir)
     method = (
         local_dist_df["method"].iloc[0] if not local_dist_df.empty else "UnknownMethod"
     )
     plot_local_distributions(method, local_dist_df, out_dir)
     plot_ris_vs_rbo_scatter(method, local_dist_df, out_dir)
     plot_rbo_conditioned_on_ris(method, local_dist_df, out_dir)
+    plot_retention_rate_summary(method, retention_instance_df, out_dir)
     plot_faithfulness_summary(method, global_df, out_dir)
     plot_metric_correlation_heatmap(method, local_dist_df, global_df, out_dir)
+    plot_topk_feature_frequency(
+        method,
+        topk_feature_freq_df,
+        topk_unique_instances_df,
+        prediction_flips_dir,
+        out_dir,
+    )
 
     print(f"Processed {len(result_files)} result files.")
     print(f"Wrote outputs to: {out_dir}")

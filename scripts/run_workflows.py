@@ -75,6 +75,8 @@ def _discover_method_result_dirs(results_root: Path, method_name: str) -> list[P
 
 def _plot_results(args: argparse.Namespace) -> None:
     plot_script = REPO_ROOT / "scripts" / "plot_experiment_results.py"
+    flip_script = REPO_ROOT / "scripts" / "analyse_prediction_flips.py"
+    topk_script = REPO_ROOT / "scripts" / "analyse_topk_perturbation_logs.py"
     results_root = (REPO_ROOT / args.results_root).resolve()
     methods = [m.strip() for m in args.methods if m.strip()]
 
@@ -83,6 +85,10 @@ def _plot_results(args: argparse.Namespace) -> None:
 
     if not plot_script.exists():
         raise FileNotFoundError(f"Plot script not found: {plot_script}")
+    if not flip_script.exists():
+        raise FileNotFoundError(f"Prediction flip script not found: {flip_script}")
+    if not topk_script.exists():
+        raise FileNotFoundError(f"Top-K analysis script not found: {topk_script}")
 
     discovered_any = False
     for method in methods:
@@ -93,11 +99,38 @@ def _plot_results(args: argparse.Namespace) -> None:
 
         discovered_any = True
         for method_dir in method_dirs:
+            flips_out_dir = method_dir / "prediction_flip_analysis"
+            topk_out_dir = method_dir / "topk_analysis"
+            _run(
+                [
+                    sys.executable,
+                    str(flip_script),
+                    "--results-dir",
+                    str(method_dir),
+                    "--output-dir",
+                    str(flips_out_dir),
+                ]
+            )
+            _run(
+                [
+                    sys.executable,
+                    str(topk_script),
+                    "--results-dir",
+                    str(method_dir),
+                    "--output-dir",
+                    str(topk_out_dir),
+                    "--dedupe",
+                ]
+            )
             cmd = [
                 sys.executable,
                 str(plot_script),
                 "--results-dir",
                 str(method_dir),
+                "--prediction-flips-dir",
+                str(flips_out_dir),
+                "--topk-analysis-dir",
+                str(topk_out_dir),
             ]
             _run(cmd)
 
