@@ -517,6 +517,47 @@ def plot_metric_correlation_heatmap(
     plt.close()
 
 
+def plot_faithfulness_summary(
+    method: str,
+    global_df: pd.DataFrame,
+    out_dir: Path,
+) -> None:
+    if global_df.empty:
+        return
+
+    faith_df = global_df[
+        (global_df["phase"] == "perturbed") & (global_df["metric"].isin(["GC", "GS"]))
+    ].copy()
+    if faith_df.empty:
+        return
+
+    pert_order = _cat_order_if_present(
+        faith_df, "perturbation", list(PERTURBATION_NAME_MAP.values())
+    )
+    g = sns.catplot(
+        data=faith_df,
+        kind="bar",
+        x="perturbation",
+        y="value",
+        hue="sample_group",
+        col="metric",
+        col_order=[m for m in ["GC", "GS"] if m in set(faith_df["metric"])],
+        order=pert_order,
+        height=4,
+        aspect=1.1,
+        sharey=False,
+        errorbar=None,
+    )
+    g.set_axis_labels("Perturbation", "Faithfulness score")
+    for ax in g.axes.flatten():
+        for container in ax.containers:
+            ax.bar_label(container, fmt="%.3f", padding=2, fontsize=6)
+    g.figure.subplots_adjust(top=0.84)
+    g.figure.suptitle(f"{method}: Faithfulness Metrics by Perturbation (TP vs FP)")
+    g.savefig(out_dir / f"{method}_faithfulness_metrics_barplots.png", dpi=300)
+    plt.close(g.figure)
+
+
 def main() -> None:
     args = parse_args()
     sns.set_style("whitegrid")
@@ -542,6 +583,7 @@ def main() -> None:
     plot_local_distributions(method, local_dist_df, out_dir)
     plot_ris_vs_rbo_scatter(method, local_dist_df, out_dir)
     plot_rbo_conditioned_on_ris(method, local_dist_df, out_dir)
+    plot_faithfulness_summary(method, global_df, out_dir)
     plot_metric_correlation_heatmap(method, local_dist_df, global_df, out_dir)
 
     print(f"Processed {len(result_files)} result files.")
