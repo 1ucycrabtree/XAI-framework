@@ -15,17 +15,19 @@ python -m xai_framework --config default.yaml
 python -m xai_framework --config KernelSHAP_TP_Noise.yaml
 ```
 
-## Dissertation Experiment Workflow Commands
+## Dissertation Experiment Specific Workflow Commands
 For IEEE-CIS tuning/setup. Need to add dataset in data/raw. And then run the train script (no --tune to skip tuning). 
 
 Use one entry point for experiment setup tasks:
-
 ```bash
 # 1) Full preprocessing + model training
 python scripts/run_workflows.py train --tune
 
 # 2) Perturbation calibration + locality validation
 python scripts/run_workflows.py perturbation
+
+# 3) Plot experiment results
+python scripts/run_workflows.py plot_results --results-root results --methods TabularLIME KernelSHAP
 ```
 
 ## Parallel Launcher

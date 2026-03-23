@@ -10,6 +10,7 @@ services:
       - ./scripts:/framework/scripts
       - ./config:/framework/config
       - ./data:/framework/data
+      - ./results:/framework/results
       # Ignore cache directories
       - /framework/xai_framework/__pycache__
       - /framework/xai_framework/.ruff_cache
