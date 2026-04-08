@@ -7,6 +7,9 @@ __pycache__/
 .vscode/
 .ruff_cache/
 
-data/
+catboost_info/
+logs/
 
+data/
 **metadata/
+results/checkpoints/
