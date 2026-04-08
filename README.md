@@ -8,20 +8,61 @@ Framework for robustness evaluation of tabular explainers under controlled pertu
 docker-compose up -d --build
 docker-compose exec xai-robustness bash
 conda activate xai_env
-python src/main.py --config default.yaml
+python -m xai_framework --config default.yaml
 ```
+
+```bash
+python -m xai_framework --config KernelSHAP_TP_Noise.yaml
+```
+
+## Dissertation Experiment Specific Workflow Commands
+For IEEE-CIS tuning/setup. Need to add dataset in data/raw. And then run the train script (no --tune to skip tuning). 
+
+Use one entry point for experiment setup tasks:
+```bash
+# 1) Full preprocessing + model training
+python scripts/run_workflows.py train --tune
+
+# 2) Perturbation calibration + locality validation
+python scripts/run_workflows.py perturbation
+
+# 3) Plot experiment results for TabularLIME and KernelSHAP
+python scripts/run_workflows.py plot_results
+```
+
+## Parallel Launcher
+
+Launch all KernelSHAP + TabularLIME configs in parallel:
+
+```bash
+bash scripts/launch_parallel_experiments.sh
+```
+
+Run detached:
+
+```bash
+nohup bash scripts/launch_parallel_experiments.sh > logs/launcher.log 2>&1 &
+```
+
+Resource behaviour:
+- KernelSHAP: 1 core per process (`OMP_NUM_THREADS=1`, `MKL_NUM_THREADS=1`).
+- TabularLIME: uses remaining cores, up to 4 cores per process.
+- Requires at least 12 cores to launch all jobs concurrently.
 
 ## Project Structure
 
 ```
-xai-robustness/
+xai-framework/
 ├── config/
-│   └── default.yaml                    # Default experiment variables
-│   └── KernelSHAP_*_*.yaml             # KernelSHAP configs by group/perturbation
-│   └── TabularLIME_*_*.yaml            # TabularLIME configs by group/perturbation
-├── data/                     # Mount your dataset and model here
+│   └── default.yaml          # Experiment variables (model, explanation method, perturbation rules)
+│   └── baseline_LIME.yaml    # Baseline experiment with TabularLIME
+│   └── baseline_SHAP.yaml    # Baseline experiment with KernelSHAP
+├── data/
+│   └── raw/                     # Mount your raw data if need to preprocess here
+│   └── processed/                     # Mount your processed dataset here
+│   └── models/                     # Mount your model here
 ├── results/                  # Outputs and checkpoints written here
-├── src/
+├── xai_framework/
 │   ├── dataset/              # Data loading (extensible)
 │   ├── experiment/           # Experiment (extensible)
 │   ├── explainer/            # Explainer wrappers (extensible)
@@ -39,29 +80,29 @@ xai-robustness/
 
 ## How It Works
 
-`src/main.py` orchestrates one run:
+`xai_framework/main.py` orchestrates one run:
 
 1. Load config (`config/*.yaml`).
 2. Load dataset/model/explainer.
 3. Build metrics from registry.
 4. For each perturbation strategy, build and run an experiment via the experiment registry.
 
-The default experiment is `BaselineExperiment`, selected by:
+The default experiment is `DissertationExperiment`, selected by:
 
 ```yaml
 experiment:
-  name: BaselineExperiment
+  name: DissertationExperiment
 ```
 
 ## Registry Pattern
 
 The project uses decorator-based registries:
 
-- Models: `src/model/registry.py`
-- Explainers: `src/explainer/registry.py`
-- Perturbations: `src/perturbation/registry.py`
-- Metrics: `src/metric/registry.py`
-- Experiments: `src/experiment/registry.py`
+- Models: `xai_framework/model/registry.py`
+- Explainers: `xai_framework/explainer/registry.py`
+- Perturbations: `xai_framework/perturbation/registry.py`
+- Metrics: `xai_framework/metric/registry.py`
+- Experiments: `xai_framework/experiment/registry.py`
 
 To add a new component to any of the above, create a class and register it:
 
@@ -124,7 +165,7 @@ The correct loader is selected automatically from the file extension.
 
 | Experiment   | `name` value         |
 | -------------------- | -------------------- |
-| Baseline Experiment | `BaselineExperiment` |
+| Baseline Experiment | `DissertationExperiment` |
 
 ---
 
@@ -151,6 +192,10 @@ Parallel chunk execution:
 - `max_workers: 1` keeps the original single-worker behaviour.
 - For heavy explainers, start with small values and scale based on RAM/CPU headroom.
 
+Sampling group selection:
+
+- Set `experiment.sample_group` to choose which confusion-matrix group is sampled: `TP`, `TN`, `FP`, or `FN`.
+
 Important:
 
 - Resume only works for the same `run_id`.
@@ -159,7 +204,7 @@ Important:
 
 ## Output Layout
 
-For a run id like `TestExperiment_run_20260309_165129`:
+For a run id like `DissertationExperiment_run_20260309_165129`:
 
 - Checkpoints:
   - `results/checkpoints/<run_id>/<explainer>_<perturbation>/run_manifest.json`
@@ -196,6 +241,27 @@ dataset:
   train_file_path: "data/processed/splits/train_dataset.parquet"
   test_file_path: "data/processed/splits/test_dataset.parquet"
   target_label: isFraud
+  categorical_features: # Optional: Any features that should be treated as categorical 
+    - ProductCD
+    - card1
+    - ...
+  perturbable_categorical_features: # Optional: If provided, perturbations only mutate this categorical subset
+    - ProductCD
+    - card4
+  perturbable_numerical_features: # Optional: If provided, perturbations only mutate this numerical subset
+    - TransactionAmt
+    - dist1
+  integer_features: # Optional: Any discrete integer-like features to round after noise
+    - C1
+    - D1
+    - ...
+  non_negative_features: # Optional: Always clamp these features to >= 0
+    - TransactionAmt
+  non_negative_prefixes: # Optional: Clamp any feature starting with these prefixes
+    - C
+    - D
+  immutable_features: # Optional: Never perturb these features
+    - card1
 
 model:
   architecture: CatBoost
@@ -210,8 +276,8 @@ perturbations:
   - name: TopKFeatures
     n_perturbations: 10
     params:
-      k: 5
-      lambda: 0.3
+      k: 2
+      lambda: 0.05
 
 metrics:
   - name: RelativeInputStability
@@ -221,13 +287,12 @@ metrics:
   - name: GlobalSufficiencyMetric
 
 experiment:
-  name: ExampleExperiment
-  type: BaselineExperiment
-  sample_size: 10
+  name: DissertationExperiment
+  sample_size: 500
   sample_group: TP
   random_seed: 42
-  chunk_size: 5
-  max_workers: 1
+  chunk_size: 50
+  max_workers: 4
   resume: true
   checkpoint_dir: "results/checkpoints"
   results_dir: "results"
@@ -237,9 +302,8 @@ experiment:
 ## Run
 
 ```bash
-python src/main.py --config default.yaml
+python -m xai_framework --config TabularLIME.yaml
 ```
-
 ## License
 
 Apache License 2.0. See `LICENSE`.

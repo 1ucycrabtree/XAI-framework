@@ -1,41 +1,12 @@
 dataset:
-  train_file_path: "data/processed/splits/train_dataset_2026-03-07_13:29:54.parquet"
-  test_file_path: "data/processed/splits/test_dataset_2026-03-07_13:29:54.parquet"
+  train_file_path: "data/processed/train_val_final.parquet"
+  test_file_path: "data/processed/test_final.parquet"
   target_label: isFraud
-  drop_columns:
-    - TransactionID
-    - TransactionDT
-  metadata:
-    name: "IEEE-CIS Fraud Detection"
-    type: cleaned
-
-model:
-  architecture: CatBoost
-  file_path: "data/models/catboost_model_cleaned_2026-01-28_22:03:17.cbm"
-  metadata:
-    name: "CatBoost Fraud Model"
-
-explainer:
-  method: TabularLIME
-  params:
-    class_names: ["Fraud", "NotFraud"]
-    random_seed: 42
-    discretize_continuous: False
-    kernel_width: 3.0
-    num_samples: 5000
-    auto_detect_binary: True
-    impute_strategy: median
-    categorical_features:
-      [
+  categorical_features: [
         "ProductCD",
-        "card1",
-        "card2",
-        "card3",
         "card4",
-        "card5",
         "card6",
         "addr1",
-        "addr2",
         "P_emaildomain",
         "R_emaildomain",
         "M1",
@@ -47,31 +18,10 @@ explainer:
         "M7",
         "M8",
         "M9",
-        "id_03",
-        "id_04",
-        "id_09",
-        "id_10",
         "id_12",
-        "id_13",
-        "id_14",
         "id_15",
-        "id_16",
-        "id_17",
-        "id_18",
-        "id_19",
-        "id_20",
-        "id_21",
-        "id_22",
-        "id_23",
-        "id_24",
-        "id_25",
-        "id_26",
-        "id_27",
-        "id_28",
-        "id_29",
         "id_30",
         "id_31",
-        "id_32",
         "id_33",
         "id_34",
         "id_35",
@@ -79,15 +29,46 @@ explainer:
         "id_37",
         "id_38",
         "DeviceType",
-        "DeviceInfo",
-      ]
+        "DeviceInfo"
+    ]
+  non_negative_features:
+    - TransactionAmt
+  non_negative_prefixes:
+    - C
+    - D
+  perturbable_categorical_features:
+  - ProductCD
+  - card4
+  - card6
+  - addr1
+  perturbable_numerical_features:
+  - TransactionAmt
+  - dist1
+
+model:
+  architecture: CatBoost
+  file_path: "data/models/catboost_fraud_model_lr0.01_depth10.cbm"
+  metadata:
+    name: "CatBoost Fraud Model"
+    decision_threshold: 0.218262061153823
+
+explainer:
+  method: TabularLIME
+  params:
+    class_names: ["Fraud", "NotFraud"]
+    random_seed: 42
+    discretize_continuous: True
+    kernel_width: 2.0
+    num_samples: 500
+    auto_detect_binary: True
+    impute_strategy: median
 
 perturbations:
   - name: LocalGaussianNoise
-    n_perturbations: 10
+    n_perturbations: 20
     random_seed: 42
     params:
-      lambda: 0.5
+      lambda: 0.2
 
 metrics:
   - name: RelativeInputStability
@@ -97,9 +78,9 @@ metrics:
   - name: GlobalSufficiencyMetric
 
 experiment:
-  name: BaselineExperiment_TabularLIME_FP_Noise
-  type: BaselineExperiment
-  sample_size: 1000
+  name: DissertationExperiment_TabularLIME_FP_Noise
+  type: DissertationExperiment
+  sample_size: 500
   sample_group: FP
   random_seed: 42
   chunk_size: 20

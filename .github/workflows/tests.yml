@@ -1,0 +1,25 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: xai_env
+          environment-file: environment.yml
+          auto-activate-base: false
+
+      - name: Run unit tests
+        run: python -m pytest -q

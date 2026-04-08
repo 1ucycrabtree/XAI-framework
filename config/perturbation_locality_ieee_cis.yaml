@@ -1,0 +1,22 @@
+base_xai_config: "default.yaml"
+
+output_dir: "results/perturbation_locality_validation"
+random_seed: 42
+
+sample_groups: ["TP", "FP"]
+samples_per_group: 50
+n_perturbations_per_sample: 5
+
+perturbations:
+  - name: LocalGaussianNoise
+    params:
+      lambda: 0.2
+  - name: DirectionalDrift
+    params:
+      drift_factor: 0.2
+      drift_factor_range: [0.2, 0.4]
+      target_features: ["TransactionAmt"]
+  - name: TopKFeatures
+    params:
+      k: 2
+      lambda: 0.2

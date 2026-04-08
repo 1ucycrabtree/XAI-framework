@@ -6,13 +6,15 @@ services:
     image: xai-robustness:latest
     container_name: xai-fraud-detection
     volumes:
-      - ./src:/app/src
-      - ./config:/app/config
-      - ./data:/app/data
+      - ./xai_framework:/framework/xai_framework
+      - ./scripts:/framework/scripts
+      - ./config:/framework/config
+      - ./data:/framework/data
+      - ./results:/framework/results
       # Ignore cache directories
-      - /app/src/__pycache__
-      - /app/src/.ruff_cache
+      - /framework/xai_framework/__pycache__
+      - /framework/xai_framework/.ruff_cache
     environment:
-      - PYTHONPATH=/app/src
+      - PYTHONPATH=/framework:/framework/xai_framework
     stdin_open: true
     tty: true

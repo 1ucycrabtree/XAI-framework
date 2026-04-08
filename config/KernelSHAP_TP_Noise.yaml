@@ -1,34 +1,75 @@
 dataset:
-  train_file_path: "data/processed/splits/train_dataset_2026-03-07_13:29:54.parquet"
-  test_file_path: "data/processed/splits/test_dataset_2026-03-07_13:29:54.parquet"
+  train_file_path: "data/processed/train_val_final.parquet"
+  test_file_path: "data/processed/test_final.parquet"
   target_label: isFraud
-  drop_columns:
-    - TransactionID
-    - TransactionDT
-  metadata:
-    name: "IEEE-CIS Fraud Detection"
-    type: cleaned
+  categorical_features: [
+        "ProductCD",
+        "card4",
+        "card6",
+        "addr1",
+        "P_emaildomain",
+        "R_emaildomain",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "id_12",
+        "id_15",
+        "id_30",
+        "id_31",
+        "id_33",
+        "id_34",
+        "id_35",
+        "id_36",
+        "id_37",
+        "id_38",
+        "DeviceType",
+        "DeviceInfo"
+    ]
+  non_negative_features:
+    - TransactionAmt
+  non_negative_prefixes:
+    - C
+    - D
+  perturbable_categorical_features:
+  - ProductCD
+  - card4
+  - card6
+  - addr1
+  perturbable_numerical_features:
+  - TransactionAmt
+  - dist1
 
 model:
   architecture: CatBoost
-  file_path: "data/models/catboost_model_cleaned_2026-01-28_22:03:17.cbm"
+  file_path: "data/models/catboost_fraud_model_lr0.01_depth10.cbm"
   metadata:
     name: "CatBoost Fraud Model"
+    decision_threshold: 0.218262061153823
 
 explainer:
   method: KernelSHAP
   params:
-    background_samples: 30
-    n_samples: 500
+    background_samples: 100
+    background_strategy: kmeans
+    kmeans_impute_strategy: median
+    kmeans_n_init: 10
+    kmeans_max_iter: 300
+    n_samples: 2000
     random_seed: 42
 
 
 perturbations:
   - name: LocalGaussianNoise
-    n_perturbations: 10
+    n_perturbations: 20
     random_seed: 42
     params:
-      lambda: 0.5
+      lambda: 0.2
 
 metrics:
   - name: RelativeInputStability
@@ -38,12 +79,12 @@ metrics:
   - name: GlobalSufficiencyMetric
 
 experiment:
-  name: BaselineExperiment_KernelSHAP_TP_Noise
-  type: BaselineExperiment
-  sample_size: 1000
+  name: DissertationExperiment_KernelSHAP_TP_Noise
+  type: DissertationExperiment
+  sample_size: 500
   sample_group: TP
   random_seed: 42
-  chunk_size: 20
+  chunk_size: 25
   max_workers: 1
   resume: true
   checkpoint_dir: "results/checkpoints"
