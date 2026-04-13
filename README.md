@@ -16,17 +16,20 @@ python -m xai_framework --config KernelSHAP_TP_Noise.yaml
 ```
 
 ## Dissertation Experiment Specific Workflow Commands
-For IEEE-CIS tuning/setup. Need to add dataset in data/raw. And then run the train script (no --tune to skip tuning). 
+To reproduce the dissertation experiment, you need to agree to the [IEEE-CIS](https://www.kaggle.com/competitions/ieee-fraud-detection/overview) Fraud Detectioin Competition rules and download the 2 train_X datset files into a folder data/raw at the root of the project. You can then run scripts to train and reproduce the experiment results.
 
 Use one entry point for experiment setup tasks:
 ```bash
 # 1) Full preprocessing + model training
-python scripts/run_workflows.py train --tune
+python scripts/run_workflows.py train
 
 # 2) Perturbation calibration + locality validation
 python scripts/run_workflows.py perturbation
 
-# 3) Plot experiment results for TabularLIME and KernelSHAP
+# 3) Run the experiments (launches all 12 in parallel)
+bash scripts/launch_parallel_experiments.sh
+
+# 4) Plot experiment results for TabularLIME and KernelSHAP
 python scripts/run_workflows.py plot_results
 ```
 
